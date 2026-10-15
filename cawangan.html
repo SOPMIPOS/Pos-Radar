@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html lang="ms">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Pecahan Negeri & Cawangan — Pantau Cawangan</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400..800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+<style>
+.crumb{display:flex;flex-wrap:wrap;gap:6px;align-items:center;font-size:14px;margin:18px 0 10px;color:var(--muted)}
+.crumb button{all:unset;cursor:pointer;color:var(--focus);font-weight:600}
+.crumb button:focus-visible{outline:2px solid var(--focus);outline-offset:2px}
+.crumb b{color:var(--ink)}
+.layout{display:grid;grid-template-columns:minmax(0,1.5fr) minmax(320px,1fr);gap:20px;align-items:start}
+@media (max-width:1050px){.layout{grid-template-columns:1fr}}
+
+/* Jadual negeri */
+.st-table{width:100%;border-collapse:collapse;min-width:640px;font-size:14px}
+.st-table th{font-size:12.5px;color:var(--muted);font-weight:600;text-align:left;padding:9px 12px;border-bottom:1px solid var(--line)}
+.st-row>td{padding:0;border-bottom:1px solid var(--line)}
+.st-btn{all:unset;box-sizing:border-box;display:grid;grid-template-columns:minmax(130px,1.2fr) 90px minmax(120px,1fr) minmax(140px,1.2fr) minmax(120px,1fr) 20px;gap:12px;align-items:center;width:100%;padding:11px 12px;cursor:pointer}
+.st-btn:hover{background:color-mix(in srgb,var(--paper) 60%,transparent)}
+.st-btn:focus-visible{outline:2px solid var(--focus);outline-offset:-2px}
+.st-btn .nm{font-weight:700;font-size:15px}
+.st-row.quiet .st-btn{color:var(--muted)}
+.st-row.quiet .st-btn .nm{font-weight:600}
+.chev{width:10px;height:10px;border-right:2px solid var(--muted);border-bottom:2px solid var(--muted);transform:rotate(-45deg);transition:transform .15s;justify-self:end}
+.st-row.open .chev{transform:rotate(45deg)}
+@media (prefers-reduced-motion: reduce){.chev{transition:none}}
+.meter{display:flex;flex-direction:column;gap:3px;font-size:13px}
+.meter b{font-size:14px}
+.bar{height:6px;border-radius:3px;background:color-mix(in srgb,var(--muted) 18%,transparent);overflow:hidden}
+.bar i{display:block;height:100%;border-radius:3px}
+.src-mini{font-size:12.5px;color:var(--muted)}
+.src-mini span{margin-right:8px;white-space:nowrap}
+.src-mini b{color:var(--ink)}
+
+/* Senarai cawangan dalam negeri */
+.br-list{padding:4px 12px 12px 24px;background:color-mix(in srgb,var(--paper) 55%,var(--surface))}
+.br-item{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:4px 14px;align-items:center;padding:10px 12px;border-radius:4px;border:1px solid transparent;cursor:pointer;background:var(--surface);margin-top:6px}
+.br-item:hover{border-color:var(--line)}
+.br-item[aria-current="true"]{border-color:var(--ink);box-shadow:inset 3px 0 0 var(--brand)}
+.br-item:focus-visible{outline:2px solid var(--focus);outline-offset:2px}
+.br-item .t{font-weight:700;display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.br-item .t small{font-weight:500;color:var(--muted);font-size:12.5px}
+.br-item .k{text-align:right;font-size:13px;color:var(--muted);white-space:nowrap}
+.br-item .k b{color:var(--ink);font-size:16px}
+.br-item .r{grid-column:1/-1;font-size:13px;color:var(--muted)}
+.br-item.quiet{opacity:.75}
+.more-btn{all:unset;cursor:pointer;color:var(--focus);font-size:13px;font-weight:600;margin:10px 0 0 4px;display:inline-block}
+.more-btn:focus-visible{outline:2px solid var(--focus);outline-offset:2px}
+
+/* Panel butiran */
+.detail{position:sticky;top:12px}
+@media (max-width:1050px){.detail{position:static}}
+.detail .card{padding:16px 18px}
+.detail h2{margin:0;font-size:22px;font-stretch:80%;font-weight:800}
+.detail .sub{color:var(--muted);font-size:13.5px;margin:4px 0 0}
+.kv{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:14px 0}
+.kv div{background:var(--paper);border-radius:4px;padding:8px 10px}
+.kv strong{display:block;font-size:20px;font-stretch:80%}
+.kv span{font-size:12.5px;color:var(--muted)}
+.detail h3{font-size:14px;margin:16px 0 6px}
+.reasons{list-style:none;margin:0;padding:0}
+.reasons li{padding:8px 0;border-bottom:1px solid var(--line);font-size:14px}
+.reasons li:last-child{border-bottom:0}
+.reasons .meta{display:block;color:var(--muted);font-size:12.5px;margin-top:2px}
+.slagrp{border:1px solid var(--line);border-radius:4px;margin-top:8px}
+.slagrp summary{cursor:pointer;padding:8px 10px;font-weight:600;font-size:14px;display:flex;justify-content:space-between;gap:8px}
+.slagrp .rng{padding:0 10px 10px;font-size:13px;word-break:break-word;max-height:180px;overflow:auto}
+.placeholder{color:var(--muted);padding:28px 18px;text-align:center}
+.meter .ml{display:none;color:var(--muted);font-weight:500;margin-right:6px}
+@media (max-width:700px){
+  .st-table{min-width:0}
+  .st-table thead{display:none}
+  .st-btn{grid-template-columns:minmax(0,1fr) auto 14px;gap:8px 10px;padding:12px}
+  .st-btn>:nth-child(1){grid-column:1}
+  .st-btn>:nth-child(2){grid-column:2;grid-row:1}
+  .st-btn>:nth-child(6){grid-column:3;grid-row:1}
+  .st-btn>:nth-child(3),.st-btn>:nth-child(4),.st-btn>:nth-child(5){grid-column:1/-1}
+  .st-row.quiet .st-btn>:nth-child(3),.st-row.quiet .st-btn>:nth-child(4),.st-row.quiet .st-btn>:nth-child(5){display:none}
+  .meter .ml{display:inline}
+  .br-list{padding:4px 8px 10px}
+  .br-item{grid-template-columns:1fr}
+  .br-item .k{text-align:left}
+  .kv strong{font-size:17px}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <div class="title">
+      <h1>Pecahan Negeri &amp; Cawangan</h1>
+      <p>Pilih negeri untuk lihat cawangannya, kemudian pilih cawangan untuk sebab dan poskod</p>
+    </div>
+    <div class="controls">
+      <div class="seg" role="group" aria-label="Tempoh" id="win">
+        <button aria-pressed="true" data-w="now">Sekarang</button>
+        <button aria-pressed="false" data-w="today">Hari ini</button>
+        <button aria-pressed="false" data-w="week">7 hari</button>
+      </div>
+      <button class="btn" id="csv">Muat turun CSV poskod</button>
+      <button class="btn primary" id="refresh">Kemas kini data</button>
+    </div>
+  </header>
+  <nav class="pages" aria-label="Halaman">
+    <a href="index.html">Ringkasan</a>
+    <a href="cawangan.html" aria-current="page">Pecahan negeri &amp; cawangan</a>
+  </nav>
+  <div class="sources" id="sources"></div>
+  <div class="notice" id="notice" hidden></div>
+
+  <div class="counts" id="counts"></div>
+
+  <div class="crumb" id="crumb" aria-label="Lokasi"></div>
+
+  <div class="layout">
+    <section>
+      <div class="card tbl">
+        <table class="st-table">
+          <thead><tr><th colspan="1" style="padding:0">
+            <div class="st-btn" style="cursor:default;padding:9px 12px" aria-hidden="true">
+              <span>Negeri</span><span>Tahap</span><span>Cawangan terjejas</span><span>Poskod terjejas</span><span>Sumber</span><span></span>
+            </div></th></tr></thead>
+          <tbody id="states"></tbody>
+        </table>
+      </div>
+    </section>
+    <aside class="detail" id="detail" aria-live="polite"></aside>
+  </div>
+
+  <footer>
+    <p>Tahap negeri ialah tahap tertinggi antara cawangannya. Peratus poskod dikira daripada semua poskod negeri itu dalam Postcode Listing. CSV mengandungi setiap poskod di bawah cawangan terjejas dalam tempoh dipilih.</p>
+  </footer>
+</div>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<script src="pos-data.js"></script>
+<script src="core.js"></script>
+<script>
+(function(){
+"use strict";
+const P=window.Pantau;
+const {OUT,SLA,OUT_BY,STATES,LVL_TXT,e,fmtT,slaMix,pcRanges,pad,reasonsDedup,ls}=P;
+const RAW=P.st.RAW, STATUS=P.st.STATUS;
+const $=id=>document.getElementById(id);
+const COL=["#9AA8B5","#E0B020","#E07A1F","#C8102E"];
+const WIN_KEY="pantau-cawangan-win";
+let WIN=ls(WIN_KEY)||"now";
+let openStates=new Set(), selState="", selOut="", showQuiet=new Set();
+
+function toast(m){const t=$("toast");t.textContent=m;t.classList.add("show");clearTimeout(toast.t);toast.t=setTimeout(()=>t.classList.remove("show"),2600)}
+const winTxt=()=>({now:"sekarang",today:"hari ini",week:"dalam 7 hari lepas"}[WIN]);
+
+/* ---------- hash: #negeri=..&cawangan=.. ---------- */
+function readHash(){
+  const p=new URLSearchParams(location.hash.slice(1));
+  const n=p.get("negeri")||"", c=p.get("cawangan")||"";
+  selState=STATES.includes(n)?n:""; selOut=OUT_BY[c]?c:"";
+  if(selOut&&!selState)selState=OUT_BY[selOut].s;
+  if(selState)openStates.add(selState);
+}
+function writeHash(){
+  const p=new URLSearchParams(); if(selState)p.set("negeri",selState); if(selOut)p.set("cawangan",selOut);
+  const h=p.toString(); history.replaceState(null,"",h?"#"+h:location.pathname);
+}
+
+/* ---------- pengiraan ---------- */
+function model(){
+  const A=P.affected(WIN,""); const am=new Map(A.map(a=>[a.o.n,a]));
+  const states=STATES.map(s=>{
+    const outs=OUT.filter(o=>o.s===s);
+    const aff=outs.map(o=>am.get(o.n)).filter(Boolean).sort((a,b)=>b.lvl-a.lvl||b.o.k-a.o.k);
+    const totalPc=outs.reduce((x,o)=>x+o.k,0), affPc=aff.reduce((x,a)=>x+a.o.k,0);
+    const evs=aff.flatMap(a=>a.ev);
+    const srcN=k=>new Set(evs.filter(v=>v.src===k).map(v=>v.src==="MET"?v.key.replace(/[A-Z].*$/,""):v.detail)).size;
+    return {s,outs,aff,am,lvl:aff.reduce((m,a)=>Math.max(m,a.lvl),0),totalPc,affPc,met:srcN("MET"),ipu:srcN("IPU"),jps:srcN("JPS")};
+  }).sort((a,b)=>b.lvl-a.lvl||b.affPc-a.affPc||a.s.localeCompare(b.s));
+  return {A,am,states};
+}
+
+/* ---------- paparan ---------- */
+function renderSources(){
+  const L={met:"Amaran MET",ipu:"IPU APIMS",jps:"Banjir JPS"};
+  $("sources").innerHTML=Object.keys(L).map(k=>{const s=STATUS[k];let txt="";
+    if(s.s==="load")txt="menarik…";
+    else if(s.s==="ok")txt=(k==="met"?`${s.n} amaran 7 hari`:k==="ipu"?`${s.n} stesen`:`${s.n} stesen beramaran`)+(s.t?` · ${fmtT(s.t)}`:"");
+    else if(s.s==="err")txt=s.needsProxy?"perlu fungsi Netlify":"gagal — "+s.msg;
+    else txt="belum ditarik";
+    return `<span class="src ${s.s}"><i></i><b>${L[k]}</b><span>${e(txt)}</span></span>`}).join("");
+  const n=$("notice"); const errs=Object.keys(L).filter(k=>STATUS[k].s==="err");
+  const note=P.modeNote();
+  if(note&&!errs.length){n.hidden=false;n.textContent=note;return}
+  if(errs.length){n.hidden=false;n.innerHTML=`${errs.map(k=>L[k]).join(", ")} tidak dapat ditarik. `+(errs.some(k=>STATUS[k].needsProxy)
+    ?"Fungsi Netlify tidak aktif — deploy guna Netlify CLI atau Git (bukan drag-and-drop) supaya data dikongsi dan had 30 minit berfungsi."
+    :"Cuba tekan “Kemas kini data” semula sebentar lagi.")}
+  else n.hidden=true;
+}
+function render(){
+  renderSources();
+  const M=model();
+  const affStates=M.states.filter(x=>x.aff.length);
+  const pcs=M.A.reduce((x,a)=>x+a.o.k,0), allPc=OUT.reduce((x,o)=>x+o.k,0);
+  const C=[[affStates.length+" / "+STATES.length,"Negeri terjejas"],[M.A.length+" / "+OUT.filter(o=>o.c).length,"Cawangan terjejas"],
+    [pcs.toLocaleString("ms-MY"),"Poskod terjejas"],[(allPc?Math.round(pcs/allPc*1000)/10:0)+"%","Daripada semua poskod"],
+    [M.A.filter(a=>a.lvl>=2).length,"Cawangan Buruk / Bahaya"],[P.st.lastRefresh?fmtT(P.st.lastRefresh):"—","Data dikemas kini"]];
+  $("counts").innerHTML=C.map(c=>`<div><strong>${e(c[0])}</strong><span>${c[1]}</span></div>`).join("");
+  renderCrumb();
+  renderStates(M);
+  renderDetail(M);
+}
+function renderCrumb(){
+  const parts=[`<button data-go="all">Semua negeri</button>`];
+  if(selState)parts.push(selOut?`<button data-go="state">${e(selState)}</button>`:`<b>${e(selState)}</b>`);
+  if(selOut)parts.push(`<b>${e(selOut)}</b>`);
+  $("crumb").innerHTML=parts.join('<span aria-hidden="true">›</span>')+`<span style="margin-left:auto">Tempoh: <b>${e(winTxt())}</b></span>`;
+}
+function meter(n,tot,txt,lv,label){const pct=tot?Math.min(100,n/tot*100):0;
+  return `<div class="meter"><b><span class="ml">${label}</span>${txt}</b><div class="bar"><i style="width:${pct.toFixed(1)}%;background:${COL[lv||0]}"></i></div></div>`}
+function renderStates(M){
+  $("states").innerHTML=M.states.map(x=>{
+    const open=openStates.has(x.s); const quiet=!x.aff.length;
+    const row=`<tr class="st-row${open?" open":""}${quiet?" quiet":""}"><td>
+      <button class="st-btn" data-st="${e(x.s)}" aria-expanded="${open}">
+        <span class="nm">${e(x.s)}</span>
+        <span>${x.aff.length?`<span class="pill l${x.lvl}">${LVL_TXT[x.lvl]}</span>`:'<span class="pill l0">Tiada isu</span>'}</span>
+        ${meter(x.aff.length,x.outs.filter(o=>o.c).length,`${x.aff.length} / ${x.outs.filter(o=>o.c).length}`,x.lvl,"Cawangan")}
+        ${meter(x.affPc,x.totalPc,`${x.affPc.toLocaleString("ms-MY")} <span style="color:var(--muted);font-weight:500">(${x.totalPc?Math.round(x.affPc/x.totalPc*100):0}%)</span>`,x.lvl,"Poskod")}
+        <span class="src-mini">${x.aff.length?`<span>MET <b>${x.met}</b></span><span>IPU <b>${x.ipu}</b></span><span>JPS <b>${x.jps}</b></span>`:"—"}</span>
+        <span class="chev" aria-hidden="true"></span>
+      </button>
+      ${open?branchList(x):""}
+    </td></tr>`;
+    return row}).join("");
+}
+function branchList(x){
+  const quietOuts=x.outs.filter(o=>o.c&&!x.am.get(o.n)).sort((a,b)=>b.k-a.k);
+  const item=(o,a)=>{const R=a?reasonsDedup(a.ev):[];
+    return `<div class="br-item${a?"":" quiet"}" role="button" tabindex="0" data-out="${e(o.n)}" aria-current="${selOut===o.n}">
+      <div class="t">${a?`<span class="pill l${a.lvl}">${LVL_TXT[a.lvl]}</span>`:'<span class="pill l0">Tiada isu</span>'}${e(o.n)}<small>${e(o.dist.slice(0,3).join(", "))}${o.dist.length>3?"…":""}</small></div>
+      <div class="k"><b>${o.k.toLocaleString("ms-MY")}</b> poskod</div>
+      ${a?`<div class="r">${R.slice(0,2).map(r=>e(r.label+" — "+r.detail)).join(" · ")}${R.length>2?` · +${R.length-2} lagi`:""}</div>`:""}
+    </div>`};
+  const sq=showQuiet.has(x.s);
+  return `<div class="br-list">
+    ${x.aff.length?x.aff.map(a=>item(a.o,a)).join(""):`<div class="empty" style="padding:12px 4px">Tiada cawangan terjejas ${e(winTxt())}.</div>`}
+    ${quietOuts.length?`<button class="more-btn" data-quiet="${e(x.s)}" aria-expanded="${sq}">${sq?"Sembunyikan":"Tunjuk"} ${quietOuts.length} cawangan tiada isu</button>${sq?quietOuts.map(o=>item(o,null)).join(""):""}`:""}
+  </div>`;
+}
+function renderDetail(M){
+  const el=$("detail");
+  if(!selOut){
+    const x=selState?M.states.find(s=>s.s===selState):null;
+    el.innerHTML=`<div class="card placeholder">${x?`<b>${e(x.s)}</b>: ${x.aff.length} daripada ${x.outs.filter(o=>o.c).length} cawangan terjejas ${e(winTxt())}.<br>Pilih cawangan untuk lihat sebab dan poskod.`:"Pilih negeri, kemudian cawangan, untuk lihat sebab dan senarai poskod."}</div>`;
+    return}
+  const o=OUT_BY[selOut]; const a=M.am.get(selOut); const R=a?reasonsDedup(a.ev):[];
+  const mix=slaMix(o);
+  const groups=SLA.map((nm,i)=>({nm:nm||"Tiada SLA",i,r:o.r.filter(x=>x[2]===i)})).filter(g=>g.r.length);
+  el.innerHTML=`<div class="card">
+    <div>${a?`<span class="pill l${a.lvl}">${LVL_TXT[a.lvl]}</span>`:'<span class="pill l0">Tiada isu</span>'}</div>
+    <h2 style="margin-top:6px">${e(o.n)}</h2>
+    <p class="sub">${e(o.s)}${o.dist.length?" · Daerah: "+e(o.dist.join(", ")):""}</p>
+    <div class="kv">
+      <div><strong>${o.k.toLocaleString("ms-MY")}</strong><span>Poskod</span></div>
+      <div><strong>${R.length}</strong><span>Sebab ${e(winTxt())}</span></div>
+      <div><strong>${groups.length}</strong><span>Kumpulan SLA</span></div>
+    </div>
+    <h3>Sebab ditanda terjejas</h3>
+    ${R.length?`<ul class="reasons">${R.map(r=>`<li><span class="pill l${r.lvl}">${e(r.src)}</span> <b>${e(r.label)}</b> — ${e(r.detail)}${r.approx?" (anggaran)":""}
+      <span class="meta">${r.src==="MET"?`Sah ${fmtT(r.t0)} hingga ${fmtT(r.t1)}`:`Bacaan ${fmtT(r.t0)}`}</span></li>`).join("")}</ul>`
+      :`<p class="sub">Tiada amaran, IPU tidak sihat atau amaran sungai ${e(winTxt())}.</p>`}
+    <h3>Poskod mengikut SLA</h3>
+    ${groups.map(g=>`<details class="slagrp"${groups.length===1?" open":""}><summary><span>${e(g.nm)}</span><span>${mix[g.i].toLocaleString("ms-MY")} poskod</span></summary>
+      <div class="rng">${g.r.map(([s,t])=>s===t?pad(s):pad(s)+"–"+pad(t)).join(", ")}</div></details>`).join("")}
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px">
+      <button class="btn small" id="cpAll">Salin semua poskod</button>
+      <button class="btn small" id="cpSum">Salin ringkasan</button>
+    </div>
+  </div>`;
+  $("cpAll").onclick=()=>copy(`${o.n} (${o.s}) — ${o.k} poskod:\n${pcRanges(o).join(", ")}`,"Poskod disalin");
+  $("cpSum").onclick=()=>copy([`*${o.n}, ${o.s}* — ${a?LVL_TXT[a.lvl].toUpperCase():"TIADA ISU"} (${winTxt()})`,`${o.k} poskod`,
+    ...R.map(r=>`- ${r.label}: ${r.detail} (${fmtT(r.t0)})`)].join("\n"),"Ringkasan disalin");
+}
+async function copy(t,msg){try{await navigator.clipboard.writeText(t);toast(msg)}catch(_){const ta=document.createElement("textarea");ta.value=t;document.body.appendChild(ta);ta.select();try{document.execCommand("copy");toast(msg)}catch(__){toast("Tidak dapat menyalin")}ta.remove()}}
+
+/* ---------- CSV ---------- */
+function csv(){
+  const A=P.affected(WIN,"");
+  if(!A.length){toast("Tiada cawangan terjejas dalam tempoh ini");return}
+  const q=v=>{const s=String(v??"");return /[",\n]/.test(s)?'"'+s.replace(/"/g,'""')+'"':s};
+  const L=[["Poskod","Cawangan","Negeri","SLA","Tahap","Sebab","Tempoh","Dijana"].join(",")];
+  const gen=fmtT(Date.now()), tp=winTxt();
+  A.forEach(a=>{const why=reasonsDedup(a.ev).map(r=>`${r.label}: ${r.detail}`).join(" | ");
+    a.o.r.forEach(([s,t,i])=>{for(let p=s;p<=t;p++)L.push([pad(p),a.o.n,a.o.s,SLA[i]||"",LVL_TXT[a.lvl],why,tp,gen].map(q).join(","))})});
+  const blob=new Blob(["﻿"+L.join("\r\n")],{type:"text/csv;charset=utf-8"});
+  const d=new Date(Date.now()+8*3600e3).toISOString().slice(0,16).replace(/[-:]/g,"").replace("T","-");
+  const url=URL.createObjectURL(blob); const link=document.createElement("a");
+  link.href=url; link.download=`poskod-terjejas-${WIN}-${d}.csv`; document.body.appendChild(link); link.click(); link.remove();
+  setTimeout(()=>URL.revokeObjectURL(url),2000);
+  toast(`${(L.length-1).toLocaleString("ms-MY")} poskod dimuat turun`);
+}
+
+/* ---------- interaksi ---------- */
+$("states").addEventListener("click",ev=>{
+  const q=ev.target.closest("[data-quiet]");
+  if(q){const s=q.dataset.quiet;showQuiet.has(s)?showQuiet.delete(s):showQuiet.add(s);render();return}
+  const it=ev.target.closest("[data-out]");
+  if(it){selOut=it.dataset.out;selState=OUT_BY[selOut].s;writeHash();render();
+    if(window.matchMedia("(max-width:1050px)").matches)$("detail").scrollIntoView({behavior:"smooth",block:"start"});return}
+  const b=ev.target.closest("[data-st]");
+  if(b){const s=b.dataset.st;
+    if(openStates.has(s)&&selState===s){openStates.delete(s);selState="";selOut=""}
+    else{openStates.add(s);selState=s;if(selOut&&OUT_BY[selOut].s!==s)selOut=""}
+    writeHash();render();
+    const nb=document.querySelector(`[data-st="${CSS.escape(s)}"]`);nb&&nb.focus()}
+});
+$("states").addEventListener("keydown",ev=>{const it=ev.target.closest("[data-out]");if(it&&(ev.key==="Enter"||ev.key===" ")){ev.preventDefault();it.click()}});
+$("crumb").addEventListener("click",ev=>{const b=ev.target.closest("[data-go]");if(!b)return;
+  if(b.dataset.go==="all"){selState="";selOut="";openStates.clear()}else{selOut=""}
+  writeHash();render()});
+$("win").addEventListener("click",ev=>{const b=ev.target.closest("button[data-w]");if(!b)return;WIN=b.dataset.w;ls(WIN_KEY,WIN);syncWin();render()});
+function syncWin(){[...$("win").children].forEach(x=>x.setAttribute("aria-pressed",String(x.dataset.w===WIN)))}
+$("csv").onclick=csv;
+P.bindRefreshButton($("refresh"),toast);
+window.addEventListener("hashchange",()=>{readHash();render()});
+P.onChange(t=>t==="data"?render():renderSources());
+
+/* ---------- mula ---------- */
+readHash(); syncWin();
+render();
+P.init(); // baca data kongsi; had 30 minit dikawal oleh pelayan
+window.__cawangan={model,csv};
+})();
+</script>
+</body>
+</html>

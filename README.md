@@ -8,21 +8,26 @@ cawangan itu. Butang **Kemas kini data** menarik data terkini terus dari sumber 
 
 | Fail | Fungsi |
 |---|---|
-| `index.html` | Dashboard |
+| `index.html` | Ringkasan: senarai cawangan terjejas, peta, semak poskod, laporan WhatsApp |
+| `cawangan.html` | Pecahan negeri → cawangan → butiran (sebab, daerah, poskod ikut SLA), muat turun CSV poskod terjejas. Pautan boleh dikongsi, cth. `cawangan.html#negeri=Johor&cawangan=Segamat%20(PLC)` |
+| `core.js` | Enjin data bersama (tarikan, padanan, pengiraan) untuk kedua-dua halaman |
+| `style.css` | Gaya bersama |
 | `pos-data.js` | 96 outlet, julat poskod + SLA, dan pemetaan daerah → cawangan (daripada Postcode Listing) |
-| `netlify/functions/proxy.mjs` | Proxy kecil supaya pelayar boleh baca laman JPS dan APIMS (sekatan CORS) |
+| `netlify/functions/data.mjs` | Fungsi pelayan `/api/data`: menarik MET, APIMS dan JPS, menyimpan satu salinan untuk semua pengguna (Netlify Blobs), dan menguatkuasakan had kemas kini 30 minit |
+| `package.json` | Pakej `@netlify/blobs` untuk fungsi di atas |
 | `netlify.toml` | Tetapan Netlify |
 
 ## Cara deploy (pilih satu)
 
-**Jangan guna drag-and-drop.** Netlify Drop tidak menjalankan fungsi, jadi IPU dan JPS
-tidak akan dapat ditarik (amaran MET masih berfungsi).
+**Jangan guna drag-and-drop.** Netlify Drop tidak menjalankan fungsi, jadi data tidak dikongsi,
+had 30 minit hanya untuk pelayar masing-masing, dan IPU serta JPS tidak dapat ditarik.
 
 ### A. Netlify CLI (paling cepat)
 ```bash
 npm install -g netlify-cli
 netlify login
 cd pantau-cawangan
+npm install          # pasang @netlify/blobs (sekali sahaja)
 netlify deploy --prod
 ```
 Bila ditanya, pilih "Create & configure a new site". Publish directory: `.`
@@ -30,7 +35,7 @@ Bila ditanya, pilih "Create & configure a new site". Publish directory: `.`
 ### B. GitHub
 1. Muat naik folder ini ke repo GitHub baharu.
 2. Netlify → Add new site → Import an existing project → pilih repo.
-3. Build command: kosongkan. Publish directory: `.` → Deploy.
+3. Build command: kosongkan. Publish directory: `.` → Deploy. (Netlify memasang `@netlify/blobs` secara automatik daripada `package.json`.)
 
 Selepas deploy, buka laman dan semak tiga titik status di bahagian atas (MET, APIMS, JPS)
 semuanya hijau.
@@ -47,6 +52,16 @@ semuanya hijau.
 - Tempoh **Sekarang / Hari ini / 7 hari**: amaran MET 7 hari ditarik setiap kali.
   IPU dan JPS hanya ada bacaan semasa — sejarahnya dikumpul dalam pelayar setiap kali
   butang ditekan.
+
+## Nota penggunaan
+
+- **Had kemas kini 30 minit untuk semua pengguna.** Bila sesiapa menekan "Kemas kini data", butang dikunci untuk semua orang selama 30 minit dan menunjukkan baki minit. Had ini dikuatkuasakan di pelayan, jadi tidak boleh dielak dengan muat semula halaman atau pelayar lain.
+- Semua pengguna melihat data yang sama. Halaman yang sedang dibuka menyemak setiap 2 minit dan memaparkan data baharu secara automatik bila pengguna lain mengemas kini.
+- Kali pertama selepas deploy (belum ada data), data ditarik sekali secara automatik.
+- Jika semua sumber gagal semasa kemas kini, butang tidak dikunci dan data terakhir kekal dipaparkan.
+- Sejarah IPU 7 hari disimpan di pelayan (sama untuk semua). Sejarah JPS dikumpul dalam pelayar setiap pengguna.
+- Pilihan tempoh (Sekarang / Hari ini / 7 hari) dikongsi antara kedua-dua halaman.
+- CSV mengandungi setiap poskod di bawah cawangan terjejas: Poskod, Cawangan, Negeri, SLA, Tahap, Sebab. Dibuka terus dalam Excel.
 
 ## Had yang perlu diketahui
 
