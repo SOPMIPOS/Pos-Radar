@@ -1,0 +1,8 @@
+[build]
+  publish = "."
+  functions = "netlify/functions"
+
+[[headers]]
+  for = "/pos-data.js"
+  [headers.values]
+    Cache-Control = "public, max-age=3600"

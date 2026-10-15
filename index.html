@@ -1,0 +1,603 @@
+<!DOCTYPE html>
+<html lang="ms">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Pantau Cawangan — Cuaca, Banjir & IPU</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400..800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<style>
+:root{
+  --ink:#14212E; --paper:#EEF1F4; --surface:#FFFFFF; --line:#D3DAE1; --muted:#5A6774;
+  --brand:#C8102E; --brand-ink:#FFFFFF; --focus:#1D5FD1;
+  --ok:#2E7D5B; --ok-bg:#E3F1EA; --w:#8A6700; --w-bg:#FBF2D3; --b:#B2510A; --b-bg:#FCE6D4; --x:#A3131A; --x-bg:#F9DADB;
+  --m0:#9AA8B5; --m1:#E0B020; --m2:#E07A1F; --m3:#C8102E;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --ink:#E6ECF2; --paper:#0F161D; --surface:#17212B; --line:#2A3846; --muted:#9AA8B5;
+    --brand:#E0344A; --focus:#7FAEFF;
+    --ok:#5FC193; --ok-bg:#163327; --w:#F0C541; --w-bg:#3A3112; --b:#F39443; --b-bg:#3D2414; --x:#FF6B70; --x-bg:#401A1C;
+  }
+}
+*,*::before,*::after{box-sizing:border-box}
+body{margin:0;background:var(--paper);color:var(--ink);font-family:"Archivo",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  font-size:15px;line-height:1.5;font-variant-numeric:tabular-nums;padding-bottom:env(safe-area-inset-bottom,0px)}
+button,input,select,textarea{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--focus);outline-offset:2px}
+a{color:var(--focus)}
+.wrap{max-width:1320px;margin:0 auto;padding:0 20px 56px}
+@media (max-width:600px){.wrap{padding:0 16px 48px}}
+
+header.top{display:flex;flex-wrap:wrap;align-items:flex-end;gap:12px 24px;padding:22px 0 14px}
+.title h1{margin:0;font-stretch:72%;font-weight:800;font-size:clamp(26px,4vw,38px);line-height:1}
+.title p{margin:6px 0 0;color:var(--muted);font-size:14px}
+.controls{margin-left:auto;display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+.f{background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:8px 10px;min-height:40px}
+.btn{border:1px solid var(--line);background:var(--surface);border-radius:6px;padding:8px 14px;min-height:40px;cursor:pointer;font-weight:600}
+.btn:hover{border-color:var(--muted)}
+.btn.primary{background:var(--brand);border-color:var(--brand);color:var(--brand-ink);font-size:15px;padding:9px 18px}
+.btn.primary[disabled]{opacity:.7;cursor:progress}
+.btn.small{padding:4px 10px;min-height:30px;font-size:13px;font-weight:500}
+.spin{display:inline-block;width:14px;height:14px;border:2px solid currentColor;border-right-color:transparent;border-radius:50%;vertical-align:-2px;margin-right:6px;animation:sp 0.8s linear infinite}
+@keyframes sp{to{transform:rotate(360deg)}}
+@media (prefers-reduced-motion: reduce){.spin{animation:none}}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:6px;overflow:hidden;background:var(--surface)}
+.seg button{border:0;background:none;padding:8px 12px;min-height:38px;cursor:pointer;font-weight:600;color:var(--muted)}
+.seg button[aria-pressed="true"]{background:var(--ink);color:var(--paper)}
+
+.sources{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 14px}
+.src{display:inline-flex;align-items:center;gap:8px;background:var(--surface);border:1px solid var(--line);border-radius:999px;padding:4px 12px 4px 8px;font-size:13px}
+.src i{width:9px;height:9px;border-radius:50%;background:var(--m0);flex:none}
+.src.ok i{background:var(--ok)} .src.err i{background:var(--x)} .src.load i{background:var(--m1)}
+.src b{font-weight:700}
+.src span{color:var(--muted)}
+
+.strip{display:grid;grid-template-columns:auto 1fr auto;gap:18px;align-items:center;padding:18px 22px;border-radius:4px;color:#fff;background:#2E7D5B}
+.strip[data-l="1"]{background:#8A6700} .strip[data-l="2"]{background:#B2510A} .strip[data-l="3"]{background:#A3131A}
+.strip .lvl{font-stretch:62%;font-weight:800;font-size:clamp(40px,7vw,64px);line-height:.9}
+.strip .say{font-size:16px;max-width:75ch}
+.strip .when{font-size:13px;opacity:.9;text-align:right}
+@media (max-width:720px){.strip{grid-template-columns:1fr}.strip .when{text-align:left}}
+
+.counts{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));border:1px solid var(--line);background:var(--surface);border-radius:4px;margin-top:14px}
+.counts div{padding:12px 16px;border-right:1px solid var(--line)}
+.counts div:last-child{border-right:0}
+.counts strong{display:block;font-size:28px;font-stretch:80%;font-weight:700;line-height:1.1}
+.counts span{font-size:13px;color:var(--muted)}
+@media (max-width:720px){.counts div{border-right:0;border-bottom:1px solid var(--line)}}
+
+.grid{display:grid;grid-template-columns:minmax(0,1.35fr) minmax(0,1fr);gap:20px;margin-top:22px;align-items:start}
+@media (max-width:1000px){.grid{grid-template-columns:1fr}}
+.block-h{display:flex;flex-wrap:wrap;align-items:baseline;gap:8px 14px;margin:0 0 10px}
+.block-h h2{margin:0;font-size:19px;font-stretch:85%;font-weight:700}
+.block-h p{margin:0;color:var(--muted);font-size:13px;flex:1 1 240px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:4px}
+
+/* Affected branches */
+.br{border-bottom:1px solid var(--line);padding:12px 16px;display:grid;grid-template-columns:1fr auto;gap:4px 12px}
+.br:last-child{border-bottom:0}
+.br h3{margin:0;font-size:16px;font-weight:700;display:flex;flex-wrap:wrap;align-items:center;gap:8px}
+.br h3 small{font-weight:500;color:var(--muted);font-size:13px}
+.br .pcs{text-align:right;font-size:13px;color:var(--muted);white-space:nowrap}
+.br .pcs b{display:block;font-size:20px;color:var(--ink);font-stretch:80%}
+.why{grid-column:1/-1;display:flex;flex-wrap:wrap;gap:6px;margin-top:2px}
+.tag{display:inline-block;padding:2px 9px;border-radius:4px;font-size:13px;line-height:1.45}
+.tag b{margin-right:4px}
+.tag em{font-style:normal;opacity:.8;font-size:12px;margin-left:4px;white-space:nowrap}
+.l1{background:var(--w-bg);color:var(--w)} .l2{background:var(--b-bg);color:var(--b)} .l3{background:var(--x-bg);color:var(--x)} .l0{background:color-mix(in srgb,var(--muted) 14%,transparent);color:var(--muted)}
+.pill{display:inline-block;padding:1px 9px;border-radius:999px;font-size:12.5px;font-weight:700}
+.br .acts{grid-column:1/-1;display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:4px}
+.sla{font-size:12.5px;color:var(--muted)}
+.pclist{grid-column:1/-1;margin-top:6px;font-size:13px;background:var(--paper);border-radius:4px;padding:8px 10px;max-height:220px;overflow:auto;word-break:break-word}
+.pclist[hidden]{display:none}
+.empty{padding:22px 16px;color:var(--muted)}
+
+#map{height:460px;border-radius:4px;border:1px solid var(--line);z-index:0}
+@media (max-width:600px){#map{height:340px}}
+.legend{display:flex;flex-wrap:wrap;gap:12px;font-size:13px;color:var(--muted);margin-top:8px}
+.legend i{display:inline-block;width:11px;height:11px;border-radius:50%;margin-right:5px;vertical-align:-1px}
+
+.lookup{display:flex;gap:8px;flex-wrap:wrap;margin-top:16px}
+.lookup input{flex:1 1 140px;max-width:220px}
+#lookRes{margin-top:8px;font-size:14px}
+
+.tbl{overflow-x:auto}
+table{border-collapse:collapse;width:100%;min-width:620px;font-size:14px}
+th,td{text-align:left;padding:8px 12px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-size:12.5px;color:var(--muted);font-weight:600}
+tr:last-child td{border-bottom:0}
+td.num{text-align:right}
+td .sub{display:block;color:var(--muted);font-size:12.5px}
+details.more{margin-top:22px}
+details.more>summary{cursor:pointer;font-weight:700;font-size:17px;font-stretch:85%;padding:6px 0}
+.warn-text{font-size:13.5px;color:var(--ink);max-width:90ch}
+textarea.report{width:100%;min-height:360px;font:inherit;font-size:14px;line-height:1.55;background:var(--surface);border:1px solid var(--line);border-radius:4px;padding:14px;resize:vertical}
+.notice{margin:12px 0 0;padding:10px 14px;border-left:3px solid var(--w);background:var(--w-bg);font-size:14px}
+.notice[hidden]{display:none}
+footer{margin-top:32px;font-size:13px;color:var(--muted)}
+footer ul{padding-left:18px}
+.toast{position:fixed;left:50%;bottom:20px;transform:translateX(-50%);background:var(--ink);color:var(--paper);padding:10px 16px;border-radius:6px;font-size:14px;opacity:0;pointer-events:none;transition:opacity .2s;z-index:1000}
+.toast.show{opacity:1}
+.leaflet-popup-content{font-family:"Archivo",system-ui,sans-serif;font-size:13px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <div class="title">
+      <h1>Pantau Cawangan</h1>
+      <p>Cawangan Pos yang terjejas oleh amaran cuaca, banjir dan jerebu, dengan poskod di bawahnya</p>
+    </div>
+    <div class="controls">
+      <div class="seg" role="group" aria-label="Tempoh" id="win">
+        <button aria-pressed="true" data-w="now">Sekarang</button>
+        <button aria-pressed="false" data-w="today">Hari ini</button>
+        <button aria-pressed="false" data-w="week">7 hari</button>
+      </div>
+      <select class="f" id="fState" aria-label="Negeri"><option value="">Semua negeri</option></select>
+      <button class="btn primary" id="refresh">Kemas kini data</button>
+    </div>
+  </header>
+
+  <div class="sources" id="sources"></div>
+
+  <div class="strip" id="strip" data-l="0">
+    <div class="lvl" id="lvl">—</div>
+    <div class="say" id="say">Menarik data terkini…</div>
+    <div class="when" id="when"></div>
+  </div>
+  <div class="notice" id="notice" hidden></div>
+
+  <div class="counts" id="counts"></div>
+
+  <div class="grid">
+    <section>
+      <div class="block-h"><h2>Cawangan terjejas</h2><p id="brHint">Disusun ikut tahap, kemudian bilangan poskod.</p>
+        <button class="btn small" id="copyBr">Salin senarai</button></div>
+      <div class="card" id="branches"></div>
+    </section>
+    <section>
+      <div class="block-h"><h2>Peta cawangan</h2><p>Bulatan berwarna ialah cawangan terjejas. Pilih untuk butiran.</p></div>
+      <div id="map" role="img" aria-label="Peta cawangan Pos dan status"></div>
+      <div class="legend"><span><i style="background:var(--m3)"></i>Bahaya / IPU &gt;200</span><span><i style="background:var(--m2)"></i>Buruk / Amaran / IPU &gt;150</span><span><i style="background:var(--m1)"></i>Waspada / IPU &gt;100</span><span><i style="background:var(--m0)"></i>Tiada isu</span></div>
+      <div class="lookup">
+        <input class="f" id="pcIn" inputmode="numeric" maxlength="5" placeholder="Contoh 85000" aria-label="Poskod">
+        <button class="btn" id="pcBtn">Semak poskod</button>
+      </div>
+      <div id="lookRes" aria-live="polite"></div>
+    </section>
+  </div>
+
+  <details class="more" open>
+    <summary>Amaran cuaca MET</summary>
+    <div class="card tbl" id="metTbl"></div>
+  </details>
+  <details class="more">
+    <summary>Bacaan IPU (APIMS)</summary>
+    <div class="card tbl" id="ipuTbl"></div>
+  </details>
+  <details class="more">
+    <summary>Amaran paras air & hujan (JPS)</summary>
+    <div class="card tbl" id="jpsTbl"></div>
+  </details>
+  <details class="more">
+    <summary>Laporan untuk WhatsApp / e-mel</summary>
+    <div style="display:flex;gap:10px;margin:8px 0 10px;flex-wrap:wrap"><button class="btn primary" id="copyRep">Salin laporan</button></div>
+    <textarea class="report" id="report" readonly aria-label="Teks laporan"></textarea>
+  </details>
+
+  <footer>
+    <p><b>Cara cawangan ditanda terjejas</b></p>
+    <ul>
+      <li>Amaran MET: nama negeri dan daerah dalam teks amaran dipadankan dengan daerah setiap cawangan. Pemetaan daerah ke cawangan dibuat menggunakan poskod bandar utama setiap daerah dalam fail Postcode Listing.</li>
+      <li>IPU: stesen APIMS melebihi 100 menanda cawangan dalam radius 20 km. Jika tiada, cawangan terdekat (sehingga 60 km) ditanda.</li>
+      <li>JPS: stesen pada tahap Waspada, Amaran atau Bahaya dipadankan melalui nama daerah dalam nama stesen.</li>
+      <li>Jalan ditutup (JKR) belum ditarik secara automatik. Semak <a href="http://bencanaalam.jkr.gov.my/" target="_blank" rel="noopener">bencanaalam.jkr.gov.my</a>.</li>
+    </ul>
+    <p>Sumber: <a href="https://www.met.gov.my/" target="_blank" rel="noopener">METMalaysia</a> melalui <a href="https://developer.data.gov.my/realtime-api/weather" target="_blank" rel="noopener">data.gov.my</a> · <a href="https://apims.doe.gov.my/" target="_blank" rel="noopener">JAS APIMS</a> · <a href="https://publicinfobanjir.water.gov.my/cerapan/amaran-semasa/" target="_blank" rel="noopener">JPS Public Infobanjir</a></p>
+  </footer>
+</div>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<script src="pos-data.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script>
+(function(){
+"use strict";
+const DATA=window.POS_DATA;
+const OUT=DATA.outlets, DIST=DATA.districts, SLA=DATA.sla;
+const OUT_BY=Object.fromEntries(OUT.map(o=>[o.n,o]));
+const STATES=[...new Set(OUT.map(o=>o.s))].sort();
+const LVL_TXT=["Normal","Waspada","Buruk","Bahaya"];
+const HOUR=3600e3, DAY=24*HOUR;
+const PROXY="/api/proxy?u=";
+const HIST_KEY="pantau-cawangan-hist-v1";
+
+/* ---------- sumber ---------- */
+function mytStamp(t){const d=new Date(t+8*HOUR);const p=n=>String(n).padStart(2,"0");
+  return `${d.getUTCFullYear()}-${p(d.getUTCMonth()+1)}-${p(d.getUTCDate())} ${p(d.getUTCHours())}:${p(d.getUTCMinutes())}:00`}
+const SRC={
+  met:()=>`https://api.data.gov.my/weather/warning?limit=500&timestamp_start=${encodeURIComponent(mytStamp(Date.now()-7*DAY)+"@warning_issue__issued")}`,
+  ipu:()=>"https://eqms.doe.gov.my/api3/publicmapproxy/PUBLIC_DISPLAY/CAQM_MCAQM_Current_Reading/MapServer/0/query?where=1%3D1&outFields=STATION_ID%2CSTATION_LOCATION%2CPLACE%2CSTATE_NAME%2CAPI%2CCLASS%2CDATETIME%2CLATITUDE%2CLONGITUDE&returnGeometry=false&f=json",
+  jps:()=>"https://publicinfobanjir.water.gov.my/cerapan/amaran-semasa/"
+};
+
+/* ---------- utiliti ---------- */
+const $=id=>document.getElementById(id);
+function e(s){return String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]))}
+function norm(s){return String(s||"").toLowerCase().normalize("NFKD").replace(/[\u0300-\u036f]/g,"").replace(/w\.\s?p\./g,"wp ").replace(/[^a-z0-9()\:]+/g," ").replace(/\s+/g," ")}
+function fmtT(t){if(t==null||isNaN(t))return"—";return new Date(t).toLocaleString("ms-MY",{timeZone:"Asia/Kuala_Lumpur",day:"numeric",month:"short",hour:"numeric",minute:"2-digit"})}
+function fmtHM(t){return new Date(t).toLocaleTimeString("ms-MY",{timeZone:"Asia/Kuala_Lumpur",hour:"numeric",minute:"2-digit"})}
+function mytParse(s){if(!s)return null;if(typeof s==="number")return s;const x=String(s).trim().replace(" ","T");const t=Date.parse(/[zZ]|[+-]\d\d:?\d\d$/.test(x)?x:x+"+08:00");return isNaN(t)?null:t}
+function startOfTodayMYT(){const n=Date.now()+8*HOUR;return n-(n%DAY)-8*HOUR}
+function toast(m){const t=$("toast");t.textContent=m;t.classList.add("show");clearTimeout(toast.t);toast.t=setTimeout(()=>t.classList.remove("show"),2600)}
+function hav(a,b){const R=6371,r=Math.PI/180,dl=(b[0]-a[0])*r,dn=(b[1]-a[1])*r;const x=Math.sin(dl/2)**2+Math.cos(a[0]*r)*Math.cos(b[0]*r)*Math.sin(dn/2)**2;return 2*R*Math.asin(Math.sqrt(x))}
+function ls(k,v){try{if(v===undefined)return JSON.parse(localStorage.getItem(k)||"null");localStorage.setItem(k,JSON.stringify(v))}catch(_){return null}}
+
+async function fetchVia(url,kind){
+  const tryOnce=async(u)=>{const c=new AbortController();const t=setTimeout(()=>c.abort(),25000);
+    try{const r=await fetch(u,{signal:c.signal});if(!r.ok)throw new Error("HTTP "+r.status);return kind==="json"?await r.json():await r.text()}
+    finally{clearTimeout(t)}};
+  if(kind!=="html"){try{return {data:await tryOnce(url),via:"terus"}}catch(_){}}
+  try{return {data:await tryOnce(PROXY+encodeURIComponent(url)),via:"proxy"}}
+  catch(err){if(/HTTP 404/.test(err.message)){const x=new Error("fungsi proxy tiada");x.needsProxy=true;throw x}throw err}
+}
+
+/* ---------- padanan negeri & daerah (MET) ---------- */
+const STATE_PAT=[
+  ["Perlis",/\bperlis\b/g],["Kedah",/\bkedah\b/g],["Pulau Pinang",/\b(pulau pinang|penang)\b/g],
+  ["Perak",/(?<!hulu |hilir )\bperak\b(?! tengah)/g],["Selangor",/(?<!kuala |hulu )\bselangor\b/g],
+  ["Kuala Lumpur",/\bkuala lumpur\b/g],["Putrajaya",/\bputrajaya\b/g],["Labuan",/\blabuan\b/g],
+  ["Negeri Sembilan",/\bnegeri sembilan\b/g],["Melaka",/\b(melaka|malacca)\b(?! tengah)/g],
+  ["Johor",/\bjohor\b(?! bahru)/g],["Pahang",/(?<!sungai )\bpahang\b/g],["Terengganu",/(?<!kuala |hulu )\bterengganu\b/g],
+  ["Kelantan",/(?<!sungai )\bkelantan\b/g],["Sabah",/\bsabah\b/g],["Sarawak",/\bsarawak\b/g]
+];
+const ALIAS_RE=new Map();
+function aliasRe(a){if(!ALIAS_RE.has(a))ALIAS_RE.set(a,new RegExp("\\b"+a.replace(/[.*+?^${}()|[\]\\]/g,"\\$&")+"\\b"));return ALIAS_RE.get(a)}
+function districtsOf(token){
+  if(token==="Putrajaya")return DIST.filter(d=>d.n==="Putrajaya");
+  if(token==="Labuan")return DIST.filter(d=>d.n==="Labuan");
+  return DIST.filter(d=>d.s===token&&d.n!=="Putrajaya"&&d.n!=="Labuan");
+}
+function outletsOfToken(token){ // seluruh negeri
+  if(token==="Kuala Lumpur")return OUT.filter(o=>o.s==="Kuala Lumpur").map(o=>o.n);
+  return [...new Set(districtsOf(token).flatMap(d=>d.o))];
+}
+/** Pulangkan [{token, districts:[nama], outlets:[nama], whole, approx}] daripada teks amaran */
+function parseAreas(text){
+  const t=norm(text); const hits=[];
+  STATE_PAT.forEach(([tok,re])=>{re.lastIndex=0;let m;while((m=re.exec(t))){hits.push({tok,i:m.index,len:m[0].length})}});
+  hits.sort((a,b)=>a.i-b.i);
+  const firstOf=[];const seen=new Set();
+  hits.forEach((h,k)=>{const end=k+1<hits.length?hits[k+1].i:t.length;h.scope=t.slice(h.i+h.len,end);});
+  // gabung skop untuk token yang sama
+  const by={};hits.forEach(h=>{(by[h.tok]=by[h.tok]||[]).push(h.scope)});
+  return Object.entries(by).map(([tok,scopes])=>{
+    const scope=scopes.join(" ");
+    const ds=districtsOf(tok);
+    const hasList=/^\s*[(:]/.test(scopes[0])||/\(/.test(scope.slice(0,40));
+    if(/\bseluruh\b/.test(scope)&&!hasList||!hasList||tok==="Putrajaya"||tok==="Labuan"||tok==="Kuala Lumpur"||tok==="Perlis"){
+      return {tok,districts:["Seluruh "+tok],outlets:outletsOfToken(tok),whole:true};
+    }
+    const listPart=scope.slice(0,Math.max(scope.indexOf(")")+1,60)); // kandungan kurungan pertama dan sekitarnya
+    let matched=ds.filter(d=>d.a.some(a=>aliasRe(a).test(scope)));
+    const divs=(DATA.divs[tok]||{});
+    Object.entries(divs).forEach(([dv,als])=>{
+      if(als.some(a=>aliasRe(a).test(scope))){
+        const members=ds.filter(d=>d.d===dv);
+        if(!members.some(m=>matched.includes(m)))matched=matched.concat(members);
+      }});
+    if(!matched.length)return {tok,districts:["Seluruh "+tok+" (daerah tidak dikenal pasti)"],outlets:outletsOfToken(tok),whole:true,approx:true};
+    return {tok,districts:[...new Set(matched.map(d=>d.n))],outlets:[...new Set(matched.flatMap(d=>d.o))]};
+  });
+}
+function metKind(w){
+  const title=norm((w.warning_issue&&(w.warning_issue.title_bm||w.warning_issue.title_en))+" "+(w.heading_bm||"")+" "+(w.heading_en||""));
+  const body=norm((w.text_bm||"")+" "+(w.text_en||""));
+  // Buletin laut, siklon, gempa: bukan amaran darat — abaikan
+  if(/laut bergelora|rough sea|strong winds? and|tiada nasihat|no advisory|siklon|cyclone|gempa|tsunami|earthquake/.test(title))return null;
+  if(/\bperairan\b|\bwaters\b|batu nautika|nautical/.test(body))return null;
+  if(/hujan berterusan|continuous rain/.test(title)){
+    const lv=/bahaya|danger/.test(title)?3:/buruk|severe/.test(title)?2:1;
+    return {label:"Hujan berterusan ("+LVL_TXT[lv]+")",lvl:lv};
+  }
+  if(/ribut petir|thunderstorm/.test(title))return {label:"Ribut petir",lvl:1};
+  if(/hujan lebat|heavy rain/.test(title))return {label:"Hujan lebat",lvl:1};
+  return null;
+}
+
+/* ---------- state ---------- */
+let RAW={met:null,ipu:null,jps:null}, STATUS={met:{s:"idle"},ipu:{s:"idle"},jps:{s:"idle"}};
+let EVENTS=[]; // {src, lvl, label, detail, outlets[], t0, t1, key}
+let WIN="now", STATE="";
+let lastRefresh=null, busy=false;
+
+function buildEvents(){
+  const ev=[];
+  // MET
+  (RAW.met||[]).forEach((w,i)=>{
+    const k=metKind(w); if(!k)return;
+    const areas=parseAreas(w.text_bm||w.text_en||"");
+    const issued=mytParse(w.warning_issue&&w.warning_issue.issued);
+    const t0=mytParse(w.valid_from)??issued, t1=mytParse(w.valid_to)??((t0??issued)+6*HOUR);
+    areas.forEach(a=>{
+      if(!a.outlets.length)return;
+      ev.push({src:"MET",lvl:k.lvl,label:k.label,detail:(a.tok+": "+a.districts.join(", ")),approx:!!a.approx,outlets:a.outlets,t0,t1,issued,key:"met"+i+a.tok,text:w.text_bm||w.text_en});
+    });
+  });
+  // IPU semasa + sejarah tempatan
+  const ipuRows=(RAW.ipu||[]).concat(histRows("ipu"));
+  const seenI=new Set();
+  ipuRows.forEach(r=>{
+    const v=+r.api; if(!(v>100))return;
+    const k=r.id+"|"+Math.round(r.t/HOUR); if(seenI.has(k))return; seenI.add(k);
+    const lv=v>200?3:v>150?2:1;
+    ev.push({src:"IPU",lvl:lv,label:"IPU "+Math.round(v),detail:r.name,outlets:ipuOutlets(r),t0:r.t,t1:r.t+HOUR,key:"ipu"+k});
+  });
+  // JPS
+  const jpsRows=(RAW.jps||[]).concat(histRows("jps"));
+  const seenJ=new Set();
+  jpsRows.forEach(r=>{
+    const k=r.station+"|"+r.t; if(seenJ.has(k))return; seenJ.add(k);
+    ev.push({src:"JPS",lvl:r.lvl,label:r.kind+" "+["","Waspada","Amaran","Bahaya"][r.lvl],detail:r.station,outlets:r.outlets,t0:r.t,t1:r.t+3*HOUR,key:"jps"+k,approx:!r.outlets.length});
+  });
+  EVENTS=ev;
+}
+function inWindow(ev){
+  const now=Date.now();
+  if(WIN==="now"){
+    if(ev.src==="MET")return ev.t1>=now-15*60e3&&ev.t0<=now+24*HOUR;
+    if(ev.src==="IPU")return ev.t0>=now-4*HOUR;
+    return ev.t0>=now-6*HOUR;
+  }
+  const from=WIN==="today"?startOfTodayMYT():now-7*DAY;
+  return ev.t1>=from;
+}
+function ipuOutlets(r){
+  if(r.lat==null||r.lon==null)return [];
+  const d=OUT.filter(o=>o.c).map(o=>({n:o.n,km:hav([r.lat,r.lon],o.c)})).sort((a,b)=>a.km-b.km);
+  const near=d.filter(x=>x.km<=20).map(x=>x.n);
+  if(near.length)return near;
+  return d[0]&&d[0].km<=60?[d[0].n]:[];
+}
+
+/* ---------- penarikan ---------- */
+async function refresh(){
+  if(busy)return; busy=true;
+  const btn=$("refresh"); btn.disabled=true; btn.innerHTML='<span class="spin" aria-hidden="true"></span>Menarik data…';
+  ["met","ipu","jps"].forEach(k=>STATUS[k]={s:"load"}); renderSources();
+  await Promise.all([loadMet(),loadIpu(),loadJps()]);
+  lastRefresh=Date.now(); saveHist();
+  buildEvents(); renderAll();
+  busy=false; btn.disabled=false; btn.textContent="Kemas kini data";
+  const ok=["met","ipu","jps"].filter(k=>STATUS[k].s==="ok").length;
+  toast(ok===3?"Data dikemas kini":`${ok} daripada 3 sumber berjaya`);
+}
+async function loadMet(){
+  try{
+    const {data,via}=await fetchVia(SRC.met(),"json");
+    const arr=Array.isArray(data)?data:(data&&data.data)||[];
+    RAW.met=arr; const latest=Math.max(...arr.map(w=>mytParse(w.warning_issue&&w.warning_issue.issued)||0));
+    STATUS.met={s:"ok",via,n:arr.length,t:latest>0?latest:null};
+  }catch(err){STATUS.met={s:"err",msg:String(err.message||err),needsProxy:!!err.needsProxy}}
+}
+async function loadIpu(){
+  try{
+    const {data,via}=await fetchVia(SRC.ipu(),"json");
+    const f=(data&&data.features)||[];
+    RAW.ipu=f.map(x=>x.attributes||{}).filter(a=>a.API!=null&&+a.API>0).map(a=>({
+      id:a.STATION_ID,name:(a.STATION_LOCATION||a.PLACE||a.STATION_ID||"").replace(/\s+/g," ").trim(),state:a.STATE_NAME,
+      api:+a.API,cls:a.CLASS,t:+a.DATETIME||null,lat:a.LATITUDE!=null?+a.LATITUDE:null,lon:a.LONGITUDE!=null?+a.LONGITUDE:null}));
+    const latest=Math.max(...RAW.ipu.map(r=>r.t||0));
+    STATUS.ipu={s:"ok",via,n:RAW.ipu.length,t:latest>0?latest:null};
+  }catch(err){STATUS.ipu={s:"err",msg:String(err.message||err),needsProxy:!!err.needsProxy}}
+}
+async function loadJps(){
+  try{
+    const {data,via}=await fetchVia(SRC.jps(),"html");
+    const doc=new DOMParser().parseFromString(data,"text/html");
+    const upd=(doc.body.textContent.match(/Kemaskini Terakhir\s*:?\s*(\d{1,2})\/(\d{1,2})\/(\d{4})\s+(\d{1,2}):(\d{2})/i));
+    const updT=upd?Date.parse(`${upd[3]}-${upd[2].padStart(2,"0")}-${upd[1].padStart(2,"0")}T${upd[4].padStart(2,"0")}:${upd[5]}:00+08:00`):null;
+    const rows=[];
+    doc.querySelectorAll("table tr").forEach(tr=>{
+      const tds=[...tr.querySelectorAll("td")]; if(tds.length<4)return;
+      const txt=tds.map(td=>(td.textContent||"").replace(/\s+/g," ").trim());
+      const imgs=[...tr.querySelectorAll("img")].map(i=>(i.getAttribute("src")||"")+" "+(i.getAttribute("alt")||"")+" "+(i.getAttribute("title")||"")).join(" ");
+      const all=norm(txt.join(" ")+" "+imgs);
+      const dt=(txt[0].match(/(\d{1,2})\/(\d{1,2})\/(\d{4})\s+(\d{1,2}):(\d{2})/));
+      if(!dt)return; // bukan baris data (cth. jadual legenda)
+      const lvl=/bahaya|danger/.test(all)?3:/\bamaran\b|warning/.test(all)?2:/waspada|alert/.test(all)?1:/sangat lebat|very ?heavy/.test(all)?1:0;
+      if(!lvl)return;
+      const station=txt[1]||txt[0];
+      const head=norm(tableHeading(tr.closest("table")));
+      const kind=/hujan|rain/.test(head)&&!/aras|water/.test(head)?"Hujan lebat":"Aras air";
+      const t=Date.parse(`${dt[3]}-${dt[2].padStart(2,"0")}-${dt[1].padStart(2,"0")}T${dt[4].padStart(2,"0")}:${dt[5]}:00+08:00`);
+      if(rows.some(x=>x.station===station&&x.t===t&&x.kind===kind))return;
+      rows.push({station,lvl,kind,t,outlets:jpsOutlets(station),reading:txt[3]||""});
+    });
+    RAW.jps=rows; STATUS.jps={s:"ok",via,n:rows.length,t:updT};
+  }catch(err){STATUS.jps={s:"err",msg:String(err.message||err),needsProxy:!!err.needsProxy}}
+}
+function tableHeading(tb){let n=tb;for(let i=0;i<6&&n;i++){n=n.previousElementSibling||n.parentElement;if(n&&/H[1-6]|STRONG|B|P|DIV/.test(n.tagName)&&(n.textContent||"").trim().length<80&&(n.textContent||"").trim())return n.textContent}return ""}
+function jpsOutlets(text){
+  // Nama sungai (cth. "Sg. Muar") selalunya sama dengan nama daerah lain — guna lokasi stesen sahaja
+  const paren=(String(text).match(/\(([^)]+)\)/)||[])[1];
+  const base=paren||String(text).replace(/^\s*(sg|sungai|s)\.?\s+.*?\s+di\s+/i,"");
+  const t=norm(base);
+  let st=null; STATE_PAT.forEach(([tok,re])=>{re.lastIndex=0;if(!st&&re.test(t))st=tok});
+  const pool=st?districtsOf(st):DIST;
+  const m=pool.filter(d=>d.a.some(a=>a.length>3&&aliasRe(a).test(t)));
+  return [...new Set(m.flatMap(d=>d.o))];
+}
+
+/* ---------- sejarah tempatan (untuk IPU & JPS) ---------- */
+function histRows(kind){const h=ls(HIST_KEY)||{};return (h[kind]||[])}
+function saveHist(){
+  const h=ls(HIST_KEY)||{ipu:[],jps:[]}; const cut=Date.now()-8*DAY;
+  if(RAW.ipu)h.ipu=(h.ipu||[]).concat(RAW.ipu.filter(r=>r.api>100)).filter(r=>r.t>cut);
+  if(RAW.jps)h.jps=(h.jps||[]).concat(RAW.jps).filter(r=>r.t>cut);
+  // buang pendua
+  const u=(arr,f)=>{const s=new Set();return arr.filter(x=>{const k=f(x);if(s.has(k))return false;s.add(k);return true})};
+  h.ipu=u(h.ipu,r=>r.id+"|"+r.t).slice(-3000); h.jps=u(h.jps,r=>r.station+"|"+r.t).slice(-1000);
+  ls(HIST_KEY,h);
+}
+
+/* ---------- pengiraan cawangan terjejas ---------- */
+function affected(){
+  const m=new Map();
+  EVENTS.filter(inWindow).forEach(ev=>{
+    ev.outlets.forEach(n=>{
+      const o=OUT_BY[n]; if(!o)return; if(STATE&&o.s!==STATE)return;
+      const a=m.get(n)||{o,lvl:0,ev:[]};
+      a.lvl=Math.max(a.lvl,ev.lvl); a.ev.push(ev); m.set(n,a);
+    });
+  });
+  return [...m.values()].sort((a,b)=>b.lvl-a.lvl||b.o.k-a.o.k);
+}
+function slaMix(o){const c=new Array(SLA.length).fill(0);o.r.forEach(([s,e,i])=>c[i]+=e-s+1);return c}
+function pcRanges(o){return o.r.map(([s,e])=>s===e?pad(s):pad(s)+"–"+pad(e))}
+function pad(n){return String(n).padStart(5,"0")}
+function reasonsDedup(evs){
+  const by=new Map();
+  evs.forEach(ev=>{const k=ev.src+"|"+ev.label+"|"+ev.detail;const x=by.get(k);if(!x||ev.t0>x.t0)by.set(k,ev)});
+  return [...by.values()].sort((a,b)=>b.lvl-a.lvl||b.t0-a.t0);
+}
+
+/* ---------- paparan ---------- */
+function renderSources(){
+  const L={met:"Amaran MET",ipu:"IPU APIMS",jps:"Banjir JPS"};
+  $("sources").innerHTML=Object.keys(L).map(k=>{const s=STATUS[k];let txt="";
+    if(s.s==="load")txt="menarik…";
+    else if(s.s==="ok")txt=(k==="met"?`${s.n} amaran 7 hari`:k==="ipu"?`${s.n} stesen`:`${s.n} stesen beramaran`)+(s.t?` · ${fmtT(s.t)}`:"");
+    else if(s.s==="err")txt=s.needsProxy?"perlu fungsi proxy":"gagal — "+s.msg;
+    else txt="belum ditarik";
+    return `<span class="src ${s.s}"><i></i><b>${L[k]}</b><span>${e(txt)}</span></span>`}).join("");
+  const n=$("notice"); const errs=Object.keys(L).filter(k=>STATUS[k].s==="err");
+  if(errs.length){n.hidden=false;
+    n.innerHTML=`${errs.map(k=>L[k]).join(", ")} tidak dapat ditarik. `+(errs.some(k=>STATUS[k].needsProxy)
+      ?"Fungsi proxy tidak aktif — laman ini perlu dideploy guna Netlify CLI atau Git (bukan drag-and-drop) supaya <code>/api/proxy</code> berfungsi."
+      :"Sumber mungkin sedang sibuk. Cuba tekan “Kemas kini data” semula sebentar lagi.")}
+  else n.hidden=true;
+}
+function renderAll(){
+  renderSources();
+  const A=affected();
+  const lvl=A.reduce((m,a)=>Math.max(m,a.lvl),0);
+  const pcs=A.reduce((s,a)=>s+a.o.k,0);
+  const states=new Set(A.map(a=>a.o.s));
+  const winTxt={now:"sekarang",today:"hari ini",week:"dalam 7 hari lepas"}[WIN];
+  $("strip").dataset.l=lvl; $("lvl").textContent=A.length?LVL_TXT[lvl]:"Normal";
+  const top=A.slice(0,3).map(a=>a.o.n.replace(/ \((PLC|DC|LDC)\)/,"")).join(", ");
+  $("say").innerHTML=A.length?`<b>${A.length} cawangan terjejas ${winTxt}</b> di ${states.size} negeri, meliputi ${pcs.toLocaleString("ms-MY")} poskod. Paling teruk: ${e(top)}.`
+    :`Tiada cawangan terjejas ${winTxt}${STATE?" di "+e(STATE):""}. ${WIN==="now"?"Pilih “Hari ini” atau “7 hari” untuk lihat kejadian terdahulu.":""}`;
+  $("when").textContent=lastRefresh?"Dikemas kini "+fmtT(lastRefresh):"";
+  const evW=EVENTS.filter(inWindow);
+  const metN=new Set(evW.filter(x=>x.src==="MET").map(x=>x.key.replace(/[A-Z].*$/,""))).size;
+  const ipuN=new Set(evW.filter(x=>x.src==="IPU").map(x=>x.detail)).size;
+  const jpsN=new Set(evW.filter(x=>x.src==="JPS").map(x=>x.detail)).size;
+  const C=[[A.length,"Cawangan terjejas"],[pcs.toLocaleString("ms-MY"),"Poskod di bawahnya"],[states.size,"Negeri"],[metN,"Amaran MET"],[ipuN,"Stesen IPU >100"],[jpsN,"Stesen sungai beramaran"]];
+  $("counts").innerHTML=C.map(c=>`<div><strong>${c[0]}</strong><span>${c[1]}</span></div>`).join("");
+  renderBranches(A); renderMap(A); renderMet(); renderIpu(); renderJps(); $("report").value=buildReport(A); lookup(true);
+}
+function tagHtml(ev){const when=ev.src==="MET"?(ev.t0>Date.now()?"mula "+fmtT(ev.t0):"hingga "+fmtT(ev.t1)):fmtT(ev.t0);
+  return `<span class="tag l${ev.lvl}"><b>${e(ev.label)}</b> ${e(ev.detail)}${ev.approx?" (anggaran)":""} <em>${e(when)}</em></span>`}
+function renderBranches(A){
+  const el=$("branches");
+  if(!A.length){el.innerHTML=`<div class="empty">${lastRefresh?"Tiada cawangan terjejas dalam tempoh dan negeri dipilih.":"Tekan “Kemas kini data” untuk menarik data terkini."}</div>`;return}
+  el.innerHTML=A.map((a,i)=>{const mix=slaMix(a.o);const R=reasonsDedup(a.ev);
+    return `<div class="br"><h3><span class="pill l${a.lvl}">${LVL_TXT[a.lvl]}</span>${e(a.o.n)}<small>${e(a.o.s)}${a.o.dist.length?" · "+e(a.o.dist.slice(0,4).join(", "))+(a.o.dist.length>4?"…":""):""}</small></h3>
+      <div class="pcs"><b>${a.o.k.toLocaleString("ms-MY")}</b>poskod</div>
+      <div class="why">${R.slice(0,6).map(tagHtml).join("")}${R.length>6?`<span class="tag l0">+${R.length-6} lagi</span>`:""}</div>
+      <div class="acts"><button class="btn small" data-pc="${i}" aria-expanded="false">Lihat poskod</button><button class="btn small" data-cp="${i}">Salin poskod</button>
+        <span class="sla">${mix.map((c,j)=>c?`${SLA[j]||"Tiada SLA"}: ${c}`:"").filter(Boolean).join(" · ")}</span></div>
+      <div class="pclist" id="pcl${i}" hidden>${pcRanges(a.o).join(", ")}</div></div>`}).join("");
+  el.onclick=ev=>{const b=ev.target.closest("[data-pc],[data-cp]");if(!b)return;
+    if(b.dataset.pc!=null){const p=$("pcl"+b.dataset.pc);p.hidden=!p.hidden;b.setAttribute("aria-expanded",String(!p.hidden));b.textContent=p.hidden?"Lihat poskod":"Tutup poskod"}
+    else{const a=A[+b.dataset.cp];copy(`${a.o.n} (${a.o.s}) — ${a.o.k} poskod:\n${pcRanges(a.o).join(", ")}`,"Poskod disalin")}};
+  $("copyBr").onclick=()=>copy(A.map(a=>`${LVL_TXT[a.lvl].toUpperCase()} | ${a.o.n} (${a.o.s}) | ${a.o.k} poskod | ${reasonsDedup(a.ev).slice(0,3).map(r=>r.label+" "+r.detail).join("; ")}`).join("\n")||"Tiada cawangan terjejas.","Senarai disalin");
+}
+let map=null, layer=null;
+function renderMap(A){
+  if(!window.L){$("map").innerHTML='<div class="empty">Peta tidak dapat dimuatkan.</div>';return}
+  if(!map){map=L.map("map",{scrollWheelZoom:false}).setView([4.0,109.0],5);
+    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",{maxZoom:12,attribution:"© OpenStreetMap"}).addTo(map);layer=L.layerGroup().addTo(map)}
+  layer.clearLayers();
+  const col=["#9AA8B5","#E0B020","#E07A1F","#C8102E"];
+  const am=new Map(A.map(a=>[a.o.n,a]));
+  OUT.filter(o=>o.c&&(!STATE||o.s===STATE)).sort((x,y)=>(am.get(x.n)?.lvl||0)-(am.get(y.n)?.lvl||0)).forEach(o=>{
+    const a=am.get(o.n);const lv=a?a.lvl:0;
+    const mk=L.circleMarker(o.c,{radius:a?8+lv*2:5,color:"#fff",weight:1,fillColor:col[lv],fillOpacity:a?.95:.7});
+    mk.bindPopup(`<b>${e(o.n)}</b><br>${e(o.s)} · ${o.k} poskod${a?"<br>"+reasonsDedup(a.ev).slice(0,4).map(r=>`${e(r.label)} — ${e(r.detail)}`).join("<br>"):"<br>Tiada isu"}`);
+    mk.addTo(layer);
+  });
+  if(STATE){const pts=OUT.filter(o=>o.c&&o.s===STATE).map(o=>o.c);if(pts.length)map.fitBounds(pts,{padding:[30,30],maxZoom:9})}
+}
+function renderMet(){
+  const rows=(RAW.met||[]).map(w=>({w,k:metKind(w),t0:mytParse(w.valid_from),t1:mytParse(w.valid_to),iss:mytParse(w.warning_issue&&w.warning_issue.issued)}))
+    .filter(x=>x.k).filter(x=>WIN==="week"||(WIN==="today"?(x.t1??x.iss)>=startOfTodayMYT():(x.t1??x.iss+6*HOUR)>=Date.now()-15*60e3))
+    .sort((a,b)=>b.iss-a.iss);
+  $("metTbl").innerHTML=rows.length?`<table><thead><tr><th>Dikeluarkan</th><th>Amaran</th><th>Sah</th><th>Kawasan & cawangan</th></tr></thead><tbody>${rows.slice(0,80).map(x=>{const ar=parseAreas(x.w.text_bm||x.w.text_en||"");
+    return `<tr><td>${fmtT(x.iss)}</td><td><span class="pill l${x.k.lvl}">${e(x.k.label)}</span></td><td>${fmtT(x.t0)}<span class="sub">hingga ${fmtT(x.t1)}</span></td><td class="warn-text">${ar.map(a=>`<b>${e(a.tok)}</b>: ${e(a.districts.join(", "))} <span class="sub">→ ${e(a.outlets.join(", ")||"—")}</span>`).join("")}</td></tr>`}).join("")}</tbody></table>`
+    :`<div class="empty">${STATUS.met.s==="ok"?"Tiada amaran ribut petir atau hujan dalam tempoh dipilih.":"Data MET belum ditarik."}</div>`;
+}
+function renderIpu(){
+  const r=(RAW.ipu||[]).slice().sort((a,b)=>b.api-a.api);
+  $("ipuTbl").innerHTML=r.length?`<table><thead><tr><th>Stesen</th><th style="text-align:right">IPU</th><th>Kategori</th><th>Cawangan berdekatan</th><th>Masa</th></tr></thead><tbody>${r.slice(0,25).map(x=>{const lv=x.api>200?3:x.api>150?2:x.api>100?1:0;
+    return `<tr><td><b>${e(x.name)}</b><span class="sub">${e(x.state||"")}</span></td><td class="num"><b>${Math.round(x.api)}</b></td><td><span class="pill l${lv}">${e(x.cls||LVL_TXT[lv])}</span></td><td>${e(ipuOutlets(x).join(", ")||"—")}</td><td>${fmtT(x.t)}</td></tr>`}).join("")}</tbody></table><div class="empty" style="padding:8px 12px">25 bacaan tertinggi daripada ${r.length} stesen. Nasihat KKM: kurangkan aktiviti luar bila IPU melebihi 100; rider pakai pelitup muka.</div>`
+    :`<div class="empty">${STATUS.ipu.s==="ok"?"Tiada bacaan.":"Data APIMS belum ditarik."}</div>`;
+}
+function renderJps(){
+  const r=RAW.jps||[];
+  $("jpsTbl").innerHTML=STATUS.jps.s!=="ok"?`<div class="empty">Data JPS belum ditarik${STATUS.jps.needsProxy?" — fungsi proxy diperlukan":""}.</div>`
+    :r.length?`<table><thead><tr><th>Stesen</th><th>Jenis</th><th>Tahap</th><th>Cawangan</th><th>Masa</th></tr></thead><tbody>${r.map(x=>`<tr><td>${e(x.station)}<span class="sub">${e(x.reading)}</span></td><td>${e(x.kind)}</td><td><span class="pill l${x.lvl}">${["","Waspada","Amaran","Bahaya"][x.lvl]}</span></td><td>${e(x.outlets.join(", ")||"Tidak dapat dipadankan")}</td><td>${fmtT(x.t)}</td></tr>`).join("")}</tbody></table>`
+    :`<div class="empty">Tiada stesen JPS pada tahap Waspada, Amaran atau Bahaya${STATUS.jps.t?" setakat "+fmtT(STATUS.jps.t):""}.</div>`;
+}
+function buildReport(A){
+  const L=[];const winTxt={now:"Sekarang",today:"Hari ini",week:"7 hari lepas"}[WIN];
+  L.push("*PANTAU CAWANGAN — CUACA, BANJIR & IPU*");
+  L.push(`Masa: ${fmtT(lastRefresh||Date.now())} | Tempoh: ${winTxt} | Skop: ${STATE||"Semua negeri"}`);
+  const lvl=A.reduce((m,a)=>Math.max(m,a.lvl),0);
+  L.push(`Tahap keseluruhan: *${(A.length?LVL_TXT[lvl]:"Normal").toUpperCase()}*`);
+  L.push(`Cawangan terjejas: ${A.length} | Poskod: ${A.reduce((s,a)=>s+a.o.k,0).toLocaleString("ms-MY")}`);
+  L.push("");
+  if(!A.length)L.push("Tiada cawangan terjejas.");
+  [3,2,1].forEach(l=>{const g=A.filter(a=>a.lvl===l);if(!g.length)return;
+    L.push(`*${LVL_TXT[l].toUpperCase()} (${g.length})*`);
+    g.forEach(a=>{L.push(`• ${a.o.n}, ${a.o.s} — ${a.o.k} poskod`);
+      reasonsDedup(a.ev).slice(0,3).forEach(r=>L.push(`   - ${r.label}: ${r.detail}${r.approx?" (anggaran)":""} (${fmtT(r.t0)})`))});
+    L.push("")});
+  const ipu=(RAW.ipu||[]).filter(r=>r.api>100).sort((a,b)=>b.api-a.api);
+  if(ipu.length){L.push("*IPU >100 (APIMS)*");ipu.slice(0,12).forEach(r=>L.push(`• ${r.name}: ${Math.round(r.api)}`));L.push("Rider di kawasan ini: pakai pelitup muka, kurangkan masa di luar.");L.push("")}
+  L.push("_Sumber: METMalaysia (data.gov.my), JAS APIMS, JPS Public Infobanjir. Jalan ditutup: semak JKR Bencana Alam._");
+  return L.join("\n");
+}
+function lookup(silent){
+  const v=$("pcIn").value.trim(); const out=$("lookRes");
+  if(!/^\d{4,5}$/.test(v)){if(!silent)out.innerHTML="Masukkan poskod 5 digit.";else if(!v)out.innerHTML="";return}
+  const n=+v; const hits=OUT.filter(o=>o.r.some(([s,e2])=>n>=s&&n<=e2));
+  if(!hits.length){out.innerHTML=`Poskod ${e(pad(n))} tiada dalam senarai.`;return}
+  const A=new Map(affected().map(a=>[a.o.n,a]));
+  out.innerHTML=hits.map(o=>{const r=o.r.find(([s,e2])=>n>=s&&n<=e2);const a=A.get(o.n);
+    return `<div style="margin-top:6px"><b>${e(pad(n))}</b> → <b>${e(o.n)}</b>, ${e(o.s)} · SLA ${e(SLA[r[2]]||"—")}<br>${a?`<span class="pill l${a.lvl}">${LVL_TXT[a.lvl]}</span> ${reasonsDedup(a.ev).slice(0,3).map(x=>e(x.label+" — "+x.detail)).join("; ")}`:'<span class="pill l0">Tiada isu</span>'}</div>`}).join("");
+}
+async function copy(t,msg){try{await navigator.clipboard.writeText(t);toast(msg)}catch(_){const ta=document.createElement("textarea");ta.value=t;document.body.appendChild(ta);ta.select();try{document.execCommand("copy");toast(msg)}catch(__){toast("Tidak dapat menyalin")}ta.remove()}}
+
+/* ---------- kawalan ---------- */
+STATES.forEach(s=>{const o=document.createElement("option");o.value=s;o.textContent=s;$("fState").appendChild(o)});
+$("fState").onchange=ev=>{STATE=ev.target.value;renderAll()};
+$("win").onclick=ev=>{const b=ev.target.closest("button[data-w]");if(!b)return;WIN=b.dataset.w;
+  [...$("win").children].forEach(x=>x.setAttribute("aria-pressed",String(x===b)));renderAll()};
+$("refresh").onclick=refresh;
+$("pcBtn").onclick=()=>lookup(false);
+$("pcIn").addEventListener("keydown",ev=>{if(ev.key==="Enter")lookup(false)});
+$("copyRep").onclick=()=>copy($("report").value,"Laporan disalin");
+renderSources(); renderAll();
+refresh();
+window.__pantau={parseAreas,metKind,affected,buildEvents,get EVENTS(){return EVENTS},RAW,STATUS};
+})();
+</script>
+</body>
+</html>
