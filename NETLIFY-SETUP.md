@@ -18,8 +18,16 @@ Email/password login and operational reports use the real Supabase project. Repo
 
 Test with a report clearly labelled TEST, then reload to verify it remains. Confirm branch restrictions, photos, resolved-only history, Admin/User roles and deletion on the test site.
 
-Weather forecasts and MET/IPU/JPS warnings remain clearly labelled sample data. This is the reporting connection stage. Do not treat weather examples as current observations.
+## Live weather
 
-12 automated local checks passed using mocked Auth/database requests. Real public reads returned 96 branches. Authenticated real account writes/uploads and the Netlify runtime still require testing.
+`/api/forecast` serves MET Norway Locationforecast data via a cached Netlify function; no API key is required. The upstream Expires and Last-Modified headers control shared caching. Requests identify this repository in User-Agent. The page credits MET Norway under CC BY 4.0.
 
-The approved working sources, tests and standalone file are also available in Weather-App-Connected-Package.zip supplied separately.
+Seven daily cards summarise available forecast points. The time view preserves the source's actual one-hour/six-hour intervals, and precipitation is shown in mm for the stated period; it does not invent hourly values or rainfall probabilities. All displayed times use Malaysia time. Location search accepts the existing branch/city names and covered postcodes.
+
+MET and IPU map layers read the shared `/api/data` snapshot. JPS reads and parses the current Public Infobanjir homepage notifications table. Unmatched stations are not assigned to an arbitrary branch. The weather map shows forecast points/branches and monitoring stations, not flood boundaries or radar. The historical flood prediction model is not implemented.
+
+Source failures show an error; a usable cached forecast is explicitly marked when stale. Forecasts refresh when returning to the page after ten minutes or when pressing Muat semula, while respecting upstream server cache expiry.
+
+22 automated local checks pass, including forecast conversion, Malaysian dates, interval preservation, cache/304/stale handling, missing data, UI rendering, login/roles, report edits and user management. A live MET Norway response for Kuala Lumpur and the live JPS notifications HTML were parsed successfully. Authenticated real account writes/uploads and the private Netlify runtime require verification in the owner's signed-in browser.
+
+The database admin-protection SQL above remains a required setup step. The Supabase secret has been configured for Deploy Previews; configure the Production context before publishing production. This branch does not modify the boss's repository or website.
