@@ -21,6 +21,19 @@
 @media(max-width:1000px){#page-reports .stats{grid-template-columns:repeat(3,minmax(0,1fr))}}
 @media(max-width:760px){#page-reports .stats{grid-template-columns:repeat(2,minmax(0,1fr))}#inactiveReportsCard{grid-column:1/-1}}
 
+
+.role-badge.manager{background:#173b3c;color:#a4e7db}
+.manager-access fieldset{border:1px solid var(--line);border-radius:6px;margin:0 0 14px;padding:12px;min-width:0}
+.manager-access legend{font-size:12px;font-weight:700;padding:0 5px}
+.manager-access .hint{margin:0 0 9px}
+.access-list{display:grid;gap:5px;max-height:190px;overflow-y:auto;padding:3px 2px}
+.access-option{display:flex!important;align-items:flex-start;gap:8px!important;padding:7px;border-radius:5px;font-size:12px!important;line-height:1.5}
+.access-option:hover{background:#223543}
+.access-option input{width:16px;height:16px;min-width:16px;margin:2px 0 0;accent-color:#67c8b5}
+.access-option span{overflow-wrap:anywhere}
+.access-option small{display:block;font-size:10px;color:var(--muted)}
+#managerBranchSearch{margin-bottom:8px;font-size:12px}
+
 /* Category colours stay fixed; yellow/orange/red indicate severity only. */
 .source-met{--source:#ae8cf7;--source-bg:#2c2345;--source-ink:#dfcfff}
 .source-ipu{--source:#55cdb7;--source-bg:#153831;--source-ink:#aff1e0}
@@ -70,7 +83,7 @@
 <div class="filters"><span class="filter-label">Tapis</span><input id="reportSearch" placeholder="Cari cawangan, poskod, BIT atau lokasi" aria-label="Cari laporan"><select id="filterState" aria-label="Tapis negeri"><option value="">Semua negeri</option></select><select id="filterStatus" aria-label="Tapis status"><option value="active">Aktif</option><option value="resolved">Selesai</option><option value="">Semua status</option></select><button class="btn" id="resetFilters">Reset</button><button class="btn" id="exportReports">Muat turun CSV</button></div>
 <div class="table-wrap"><table><thead><tr><th rowspan="2">Tarikh / Status</th><th rowspan="2">Negeri / Pejabat</th><th rowspan="2">Cawangan / Poskod</th><th rowspan="2">Lokasi / Catatan</th><th rowspan="2">BIT</th><th colspan="4" style="text-align:center">ITEM TERTUNDA</th><th rowspan="2">Gambar</th><th rowspan="2">Disunting oleh</th><th rowspan="2">Tindakan</th></tr><tr><th class="num">Pos Laju</th><th class="num">Pos Daftar</th><th class="num">Mel</th><th class="num">Jumlah</th></tr></thead><tbody id="reportRows"></tbody></table></div><div class="table-foot"><span id="reportCount"></span><span>Aktif sahaja dipaparkan dalam Ringkasan dan pecahan cawangan.</span></div><p class="page-foot">Laporan disimpan dalam Supabase. Jumlah ialah baki item bagi laporan dipaparkan, bukan parcel unik. Laporan selesai kekal untuk rujukan. Masa suntingan mengikut Malaysia.</p></section>
 
-<section id="page-admin" class="page" hidden><div class="page-title"><div><h1>Urus pengguna</h1><p class="sub">Daftar pengguna dan tetapkan akses cawangan mereka.</p></div><span class="pill-text">Pentadbir sahaja</span></div><div class="admin-grid"><form id="userForm" class="panel stack"><h2 id="userFormTitle">Tambah pengguna</h2><div class="error" id="userError" role="alert" hidden></div><label>Nama<input id="staffName" required maxlength="120" placeholder="Nama staf"></label><label>E-mel<input id="staffEmail" type="email" required maxlength="254" placeholder="E-mel pengguna"></label><label>Username<input id="staffUsername" required pattern="[A-Za-z0-9._-]{3,40}" maxlength="40" autocomplete="off" placeholder="Contoh: ppl.batucaves"><span class="hint">3–40 aksara: huruf, nombor, titik, sengkang atau garis bawah.</span></label><label>Peranan<select id="staffRole"><option value="staff">User</option><option value="admin">Admin</option></select><span class="hint" id="staffRoleHelp">User mengurus laporan cawangan yang ditetapkan.</span></label><label id="staffBranchWrap">Cawangan / PPL<input id="staffBranch" list="allBranches" required autocomplete="off" placeholder="Taip atau pilih cawangan"><datalist id="allBranches"></datalist></label><label>Password<input id="staffPassword" type="password" minlength="12" maxlength="128" autocomplete="new-password" required><span class="hint" id="staffPasswordHelp">Minimum 12 aksara.</span></label><label class="check"><input id="staffActive" type="checkbox" checked>Akaun aktif</label><button type="submit" class="btn primary" id="saveUser">Tambah pengguna</button><button type="button" class="btn" id="cancelUserEdit" hidden>Batal suntingan</button></form><div><div class="table-wrap"><table><thead><tr><th>Nama / Username</th><th>Peranan</th><th>Cawangan / PPL</th><th>Status</th><th>Tindakan</th></tr></thead><tbody id="userRows"></tbody></table></div><p class="page-foot">Halaman ini hanya muncul selepas pentadbir log masuk. Pengguna biasa boleh menyunting laporan untuk cawangan yang ditetapkan sahaja. Akaun disimpan dalam Supabase Auth. Pengurusan akaun memerlukan fungsi server Netlify.</p></div></div></section>
+<section id="page-admin" class="page" hidden><div class="page-title"><div><h1>Urus pengguna</h1><p class="sub">Daftar pengguna dan tetapkan akses cawangan mereka.</p></div><span class="pill-text">Pentadbir sahaja</span></div><div class="admin-grid"><form id="userForm" class="panel stack"><h2 id="userFormTitle">Tambah pengguna</h2><div class="error" id="userError" role="alert" hidden></div><label>Nama<input id="staffName" required maxlength="120" placeholder="Nama staf"></label><label>E-mel<input id="staffEmail" type="email" required maxlength="254" placeholder="E-mel pengguna"></label><label>Username<input id="staffUsername" required pattern="[A-Za-z0-9._-]{3,40}" maxlength="40" autocomplete="off" placeholder="Contoh: ppl.batucaves"><span class="hint">3–40 aksara: huruf, nombor, titik, sengkang atau garis bawah.</span></label><label>Peranan<select id="staffRole"><option value="staff">User</option><option value="manager">Manager</option><option value="admin">Admin</option></select><span class="hint" id="staffRoleHelp">User: satu cawangan · Manager: beberapa cawangan/negeri · Admin: semua akses.</span></label><label id="staffBranchWrap">Cawangan / PPL<input id="staffBranch" list="allBranches" required autocomplete="off" placeholder="Taip atau pilih cawangan"><datalist id="allBranches"></datalist></label><div id="managerAccessWrap" class="manager-access" hidden><fieldset><legend>Akses negeri</legend><p class="hint">Pilih negeri untuk akses semua cawangan di negeri tersebut.</p><div id="managerStateChoices" class="access-list"></div></fieldset><fieldset><legend>Akses cawangan tambahan</legend><p class="hint">Boleh digabungkan dengan akses negeri, atau pilih cawangan sahaja.</p><input id="managerBranchSearch" type="search" placeholder="Cari cawangan atau negeri" aria-label="Cari cawangan untuk akses Manager"><div id="managerBranchChoices" class="access-list"></div></fieldset><p class="hint" id="managerAccessCount"></p></div><label>Password<input id="staffPassword" type="password" minlength="12" maxlength="128" autocomplete="new-password" required><span class="hint" id="staffPasswordHelp">Minimum 12 aksara.</span></label><label class="check"><input id="staffActive" type="checkbox" checked>Akaun aktif</label><button type="submit" class="btn primary" id="saveUser">Tambah pengguna</button><button type="button" class="btn" id="cancelUserEdit" hidden>Batal suntingan</button></form><div><div class="table-wrap"><table><thead><tr><th>Nama / Username</th><th>Peranan</th><th>Cawangan / PPL</th><th>Status</th><th>Tindakan</th></tr></thead><tbody id="userRows"></tbody></table></div><p class="page-foot">Halaman ini hanya muncul selepas pentadbir log masuk. User dan Manager boleh menyunting laporan dalam liputan yang ditetapkan sahaja. Akaun disimpan dalam Supabase Auth. Pengurusan akaun memerlukan fungsi server Netlify.</p></div></div></section>
 </main></div><footer class="site-bottom">Ramalan MET Norway · Amaran MET · IPU APIMS · JPS · Operasi Supabase · Peta © OpenStreetMap</footer>
 
 <dialog id="loginDialog" class="small" aria-labelledby="loginTitle"><div class="dialog-top"><h2 id="loginTitle">Log masuk</h2><button type="button" class="close" data-close="loginDialog" aria-label="Tutup">×</button></div><p class="dialog-help">Log masuk untuk menambah atau menyunting laporan. Paparan laporan boleh dilihat tanpa akaun.</p><form id="loginForm" class="stack"><div class="error" id="loginError" role="alert" hidden></div><label>Username / E-mel<input id="loginUsername" autocomplete="username" placeholder="Masukkan username" required></label><label>Password<div class="password-wrap"><input id="loginPassword" type="password" autocomplete="current-password" placeholder="Masukkan password" required><button type="button" id="togglePassword">Tunjuk</button></div></label><button class="btn primary" id="loginSubmit">Log masuk</button><div class="demo-login">Gunakan akaun Supabase anda. Untuk ujian fail ini, Huda boleh menggunakan username <b>huda</b> atau e-mel akaun, bersama password yang ditetapkan di Supabase.</div></form></dialog>
@@ -88,7 +101,7 @@ function makeDatabase(sdk,request=fetch){
   const checked=result=>{if(result.error)throw Error(result.error.message);return result.data;};
   const photoURL=path=>path?client.storage.from('report-photos').getPublicUrl(path).data.publicUrl:null;
   const mapReport=r=>({...r,photo:photoURL(r.photo_path)});
-  async function me(){const {data,error}=await client.auth.getUser();if(error||!data?.user)return null;const p=checked(await client.from('report_profiles').select('id,name,username,role,branch,active,email').eq('id',data.user.id).single());if(!p.active){await client.auth.signOut();throw Error('Akaun tidak aktif. Hubungi admin.');}return p;}
+  async function me(){const {data,error}=await client.auth.getUser();if(error||!data?.user)return null;const p=checked(await client.from('report_profiles').select('*').eq('id',data.user.id).single());if(!p.active){await client.auth.signOut();throw Error('Akaun tidak aktif. Hubungi admin.');}return p;}
   async function api(method,body){
     const session=checked(await client.auth.getSession())?.session;if(!session)throw Error('Sila log masuk semula.');
     if(location.protocol==='file:')throw Error('Pengurusan pengguna memerlukan laman Netlify. Log masuk dan laporan boleh diuji dalam fail ini.');
@@ -141,7 +154,7 @@ function postcodeChoices(ranges, branch) {
   return [...codes].sort();
 }
 function canEdit(profile, report) {
-  return !!profile?.active && (profile.role === 'admin' || profile.branch === report.branch);
+  return !!profile?.active && (profile.role === 'admin' || (profile.role === 'staff' && profile.branch === report.branch) || (profile.role === 'manager' && ((profile.access_branches || []).includes(report.branch) || (profile.access_states || []).includes(report.state))));
 }
 function totals(reports) {
   return reports.reduce((t, r) => ({ poslaju: t.poslaju + r.poslaju, posdaftar: t.posdaftar + r.posdaftar, mel: t.mel + r.mel,
@@ -585,7 +598,7 @@ function error(id,text=''){if($(id)){$(id).textContent=text;$(id).hidden=!text;}
 function toast(text){$('toast').textContent=text;$('toast').hidden=false;clearTimeout(toast.timer);toast.timer=setTimeout(()=>$('toast').hidden=true,4500);}
 function fmtDate(text){return new Date(text+'T00:00:00+08:00').toLocaleDateString('en-GB',{timeZone:'Asia/Kuala_Lumpur'});}
 function refreshIdentity(){
-  $('userLabel').textContent=profile?profile.name+' · '+(profile.role==='admin'?'Pentadbir':profile.branch):'';
+  $('userLabel').textContent=profile?profile.name+' · '+(profile.role==='admin'?'Pentadbir':profile.role==='manager'?'Manager':profile.branch):'';
   $('loginBtn').hidden=!!profile;$('logoutBtn').hidden=!profile;$('adminTab').hidden=!(profile?.role==='admin'&&profile.active);
   renderReports();
 }
@@ -653,7 +666,7 @@ $('activeReportsCard').onclick=()=>{$('filterStatus').value='active';renderRepor
 $('inactiveReportsCard').onclick=()=>{$('filterStatus').value='resolved';renderReports();};
 $('resetFilters').onclick=()=>{$('reportSearch').value=$('filterState').value='';$('filterStatus').value='active';renderReports();};
 $('reportRows').onclick=event=>{const photo=event.target.closest('[data-view-photo]');if(photo){const report=reports.find(r=>r.id===photo.dataset.viewPhoto);if(report?.photo){$('fullPhoto').src=report.photo;$('photoTitle').textContent=report.branch+' · '+report.postcode;$('photoDialog').showModal();}return;}const button=event.target.closest('[data-edit-report]');if(button)openReport(reports.find(r=>r.id===button.dataset.editReport));};
-function permittedBranches(){return branches.filter(b=>profile?.role==='admin'||b.name===profile?.branch);}
+function permittedBranches(){return branches.filter(b=>canEdit(profile,{branch:b.name,state:b.state}));}
 function updateBranchChoices(){const state=$('reportState').value;$('branchChoices').innerHTML=permittedBranches().filter(b=>b.state===state).map(b=>options(b.name)).join('');}
 function updatePostcodes(){
   const branch=$('reportBranch').value;
@@ -673,10 +686,10 @@ function openReport(report=null){
   if(!profile.active||(report&&!canEdit(profile,report))){toast('Akses cawangan tidak dibenarkan.');return;}
   editingReport=report;$('reportForm').reset();error('formError');locations=report?[...report.locations]:[];
   $('reportTitle').textContent=report?'Sunting laporan':'Tambah laporan';
-  const assigned=branches.find(b=>b.name===profile.branch);
+  const permitted=permittedBranches(),assigned=branches.find(b=>b.name===profile.branch)||(permitted.length===1?permitted[0]:null);
   $('reportState').innerHTML=options('','Pilih negeri')+[...new Set(permittedBranches().map(b=>b.state))].sort().map(s=>options(s)).join('');
-  $('reportState').value=report?.state||assigned?.state||'';$('reportState').disabled=!!report||profile.role!=='admin';
-  $('reportBranch').value=report?.branch||assigned?.name||'';$('reportBranch').disabled=!!report||profile.role!=='admin';
+  $('reportState').value=report?.state||assigned?.state||'';$('reportState').disabled=!!report||profile.role==='staff';
+  $('reportBranch').value=report?.branch||assigned?.name||'';$('reportBranch').disabled=!!report||profile.role==='staff';
   updateBranchChoices();updatePostcodes();
   $('reportDate').value=report?.report_date||today;$('reportStatus').value=report?.status||'active';$('reportPostcode').value=report?.postcode||'';$('reportBit').value=report?.bit||'';$('reportRemarks').value=report?.remarks||'';
   for(const id of ['poslaju','posdaftar','mel'])$(id).value=report?.[id]||0;
@@ -711,17 +724,36 @@ function isAdmin(){return profile?.role==='admin'&&profile.active;}
 function lastActiveAdmin(user){return user?.role==='admin'&&user.active&&users.filter(u=>u.role==='admin'&&u.active).length<=1;}
 function renderUsers(){
   if(!isAdmin())return;
-  $('userRows').innerHTML=users.map(u=>'<tr><td><b>'+esc(u.name)+'</b><small>'+esc(u.username)+(u.id===profile.id?' · Anda':'')+'</small></td><td><span class="role-badge '+u.role+'">'+(u.role==='admin'?'Admin':'User')+'</span></td><td>'+esc(u.role==='admin'?'Semua cawangan':u.branch)+'</td><td><span class="status '+(u.active?'resolved':'')+'">'+(u.active?'Aktif':'Tidak aktif')+'</span></td><td><div class="row-actions"><button class="btn" data-edit-user="'+u.id+'">Sunting</button><button class="btn danger" data-delete-user="'+u.id+'" '+(u.id===profile.id||lastActiveAdmin(u)?'disabled title="Akaun yang sedang digunakan atau admin aktif terakhir tidak boleh dipadam."':'')+'>Padam</button></div></td></tr>').join('');
+  $('userRows').innerHTML=users.map(u=>'<tr><td><b>'+esc(u.name)+'</b><small>'+esc(u.username)+(u.id===profile.id?' · Anda':'')+'</small></td><td><span class="role-badge '+u.role+'">'+roleLabel(u.role)+'</span></td><td>'+esc(accessSummary(u))+'</td><td><span class="status '+(u.active?'resolved':'')+'">'+(u.active?'Aktif':'Tidak aktif')+'</span></td><td><div class="row-actions"><button class="btn" data-edit-user="'+u.id+'">Sunting</button><button class="btn danger" data-delete-user="'+u.id+'" '+(u.id===profile.id||lastActiveAdmin(u)?'disabled title="Akaun yang sedang digunakan atau admin aktif terakhir tidak boleh dipadam."':'')+'>Padam</button></div></td></tr>').join('');
 }
+let managerStates=new Set(),managerBranches=new Set();
+function roleLabel(role){return ({admin:'Admin',manager:'Manager',staff:'User'})[role]||'User';}
+function accessSummary(user){
+ if(user.role==='admin')return 'Semua cawangan';
+ if(user.role!=='manager')return user.branch||'—';
+ return [(user.access_states||[]).length?'Negeri: '+user.access_states.join(', '):'',(user.access_branches||[]).length?'Cawangan: '+user.access_branches.join(', '):''].filter(Boolean).join(' · ');
+}
+function renderManagerAccess(){
+ $('managerStateChoices').innerHTML=[...new Set(branches.map(b=>b.state))].sort().map(state=>'<label class="access-option"><input type="checkbox" data-scope-state="'+esc(state)+'" '+(managerStates.has(state)?'checked':'')+'><span>'+esc(state)+'</span></label>').join('');
+ const query=$('managerBranchSearch').value.trim().toLowerCase();
+ $('managerBranchChoices').innerHTML=branches.filter(b=>!query||[b.name,b.state].join(' ').toLowerCase().includes(query)).map(b=>{const covered=managerStates.has(b.state);return '<label class="access-option"><input type="checkbox" data-scope-branch="'+esc(b.name)+'" '+(covered||managerBranches.has(b.name)?'checked':'')+' '+(covered?'disabled':'')+'><span>'+esc(b.name)+'<small>'+esc(b.state)+(covered?' · Termasuk dalam akses negeri':'')+'</small></span></label>';}).join('');
+ const total=branches.filter(b=>managerStates.has(b.state)||managerBranches.has(b.name)).length;
+ $('managerAccessCount').textContent=managerStates.size+' negeri · '+managerBranches.size+' cawangan dipilih · '+total+' cawangan dalam liputan';
+}
+$('managerStateChoices').onchange=event=>{const state=event.target.dataset.scopeState;if(!state)return;event.target.checked?managerStates.add(state):managerStates.delete(state);renderManagerAccess();};
+$('managerBranchChoices').onchange=event=>{const branch=event.target.dataset.scopeBranch;if(!branch)return;event.target.checked?managerBranches.add(branch):managerBranches.delete(branch);renderManagerAccess();};
+$('managerBranchSearch').oninput=renderManagerAccess;
 function updateUserRole(){
-  const admin=$('staffRole').value==='admin';
-  $('staffBranchWrap').hidden=admin;$('staffBranch').required=!admin;$('staffBranch').disabled=admin;
-  $('staffRoleHelp').textContent=admin?'Admin boleh mengurus semua cawangan dan akaun pengguna.':'User boleh mengurus laporan cawangan yang ditetapkan sahaja.';
+ const role=$('staffRole').value,staff=role==='staff';
+ $('staffBranchWrap').hidden=!staff;$('staffBranch').required=staff;$('staffBranch').disabled=!staff;
+ $('managerAccessWrap').hidden=role!=='manager';
+ $('staffRoleHelp').textContent=role==='admin'?'Admin boleh mengurus semua cawangan dan akaun pengguna.':role==='manager'?'Manager boleh mengurus laporan untuk negeri dan cawangan dipilih. Tidak boleh mengurus akaun pengguna.':'User boleh mengurus laporan cawangan yang ditetapkan sahaja.';
+ if(role==='manager')renderManagerAccess();
 }
 $('staffRole').onchange=updateUserRole;
 function editUser(user=null){
   if(!isAdmin())return;
-  editingUser=user;$('userForm').reset();error('userError');$('userFormTitle').textContent=user?'Sunting pengguna':'Tambah pengguna';
+  editingUser=user;managerStates=new Set(user?.access_states||[]);managerBranches=new Set(user?.access_branches||[]);$('managerBranchSearch').value='';$('userForm').reset();error('userError');$('userFormTitle').textContent=user?'Sunting pengguna':'Tambah pengguna';
   $('staffEmail').value=user?.email||'';$('staffEmail').disabled=!!user;$('staffName').value=user?.name||'';$('staffUsername').value=user?.username||'';$('staffRole').value=user?.role||'staff';$('staffBranch').value=user?.branch||'';$('staffActive').checked=user?user.active:true;updateUserRole();
   $('staffPassword').value='';$('staffPassword').required=!user;$('staffPasswordHelp').textContent=user?'Biarkan kosong untuk mengekalkan password.':'Minimum 12 aksara untuk akaun baharu.';
   $('cancelUserEdit').hidden=!user;$('saveUser').textContent=user?'Simpan perubahan':'Tambah pengguna';
@@ -746,19 +778,20 @@ $('userForm').onsubmit=async event=>{
   event.preventDefault();error('userError');$('saveUser').disabled=true;
   try{
     if(!isAdmin())throw Error('Akses pentadbir diperlukan.');
-    const username=$('staffUsername').value.trim().toLowerCase(),name=$('staffName').value.trim(),role=$('staffRole').value||'staff',branch=role==='admin'?null:$('staffBranch').value;
-    if(!['admin','staff'].includes(role))throw Error('Pilih Admin atau User.');
+    const username=$('staffUsername').value.trim().toLowerCase(),name=$('staffName').value.trim(),role=$('staffRole').value||'staff',branch=role==='staff'?$('staffBranch').value:null;
+    if(!['admin','staff','manager'].includes(role))throw Error('Pilih Admin, Manager atau User.');
+    if(role==='manager'&&!managerStates.size&&!managerBranches.size)throw Error('Pilih sekurang-kurangnya satu negeri atau cawangan untuk Manager.');
     if(!name||name.length>120||!/[a-z0-9]/.test(username)||!/^[-a-z0-9._]{3,40}$/.test(username))throw Error('Masukkan nama dan username yang sah.');
     if(users.some(u=>u.username===username&&u.id!==editingUser?.id))throw Error('Username telah digunakan.');
     if(role==='staff'&&!branches.some(b=>b.name===branch))throw Error('Pilih cawangan daripada senarai.');
     if(lastActiveAdmin(editingUser)&&(role!=='admin'||!$('staffActive').checked))throw Error('Sekurang-kurangnya seorang admin aktif mesti dikekalkan.');
     const password=$('staffPassword').value;if((!editingUser||password)&&password.length<12)throw Error('Password mesti sekurang-kurangnya 12 aksara.');
-    const record={name,username,role,branch,active:$('staffActive').checked,...(!editingUser?{email:$('staffEmail').value.trim()}:{}),...(password?{password}:{})};
+    const record={name,username,role,branch,...(role==='manager'?{access_states:[...managerStates],access_branches:[...managerBranches]}:{}),active:$('staffActive').checked,...(!editingUser?{email:$('staffEmail').value.trim()}:{}),...(password?{password}:{})};
     await db().saveUser(record,editingUser?.id);editUser();profile=await db().me();refreshIdentity();if(!isAdmin())navigate('reports');else await refreshUsers();toast('Pengguna disimpan.');
   }catch(e){error('userError',e.message);}finally{$('saveUser').disabled=false;}
 };
 
-// Weather values below are deliberately generated examples for UI review.
+// Forecast UI and official warning sources.
 const cities=branches.filter(b=>b.coordinates).map(b=>({...b,label:b.name.replace(/ \((PLC|DC|LDC)\)/,'')}));
 let city=cities.find(c=>c.label==='Kuala Lumpur')||cities[0],selectedDay=0,hourCount=12,mapMode='weather',weatherMap=null,weatherLayer=null;
 let forecast=null,forecastTicket=0,forecastBusy=false;

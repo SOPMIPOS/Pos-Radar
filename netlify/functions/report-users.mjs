@@ -19,7 +19,11 @@ export function createHandler({env=process.env,request=fetch}={}){
    const callerId=identity.data.id;
    const authz=await api('/rest/v1/report_profiles?id=eq.'+encodeURIComponent(callerId)+'&select=id,role,active');if(!authz.ok)fail('Tidak dapat menyemak akses.',503);
    if(!authz.data?.[0]?.active||authz.data[0].role!=='admin')return respond({error:'Akses admin diperlukan.'},403);
-   if(req.method==='GET'){const r=await api('/rest/v1/report_profiles?select=id,email,name,username,role,branch,active,created_at&order=name');if(!r.ok)fail('Pengguna tidak dapat dimuatkan.',502);return respond({users:r.data});}
+   if(req.method==='GET'){
+    let r=await api('/rest/v1/report_profiles?select=id,email,name,username,role,branch,access_branches,access_states,active,created_at&order=name');
+    if(!r.ok&&['42703','PGRST204'].includes(r.data?.code))r=await api('/rest/v1/report_profiles?select=id,email,name,username,role,branch,active,created_at&order=name');
+    if(!r.ok)fail('Pengguna tidak dapat dimuatkan.',502);return respond({users:r.data});
+   }
    const raw=await req.text();if(Buffer.byteLength(raw)>20000)fail('Permintaan terlalu besar.',413);
    let body;try{body=JSON.parse(raw);}catch{fail('Maklumat tidak sah.');}if(!body||Array.isArray(body)||typeof body!=='object')fail('Maklumat tidak sah.');
    const clean=(v,label,max=120)=>{if(typeof v!=='string'||!v.trim()||v.trim().length>max)fail(label+' tidak sah.');return v.trim();};
@@ -35,8 +39,20 @@ export function createHandler({env=process.env,request=fetch}={}){
     }
    }
    const name=clean(body.name,'Nama'),username=clean(body.username,'Username',40).toLowerCase();if(!/^[-a-z0-9._]{3,40}$/.test(username))fail('Username mesti 3–40 aksara: huruf kecil, nombor, titik, sengkang atau garis bawah.');
-   const role=body.role;if(!['admin','staff'].includes(role))fail('Pilih Admin atau User.');if(typeof body.active!=='boolean')fail('Status akaun tidak sah.');
-   const branch=role==='admin'?null:clean(body.branch,'Cawangan');
+   const role=body.role;if(!['admin','staff','manager'].includes(role))fail('Pilih Admin, Manager atau User.');if(typeof body.active!=='boolean')fail('Status akaun tidak sah.');
+   const branch=role==='staff'?clean(body.branch,'Cawangan'):null;
+   let scope={};
+   if(existing&&('access_branches' in existing||'access_states' in existing))scope={access_branches:[],access_states:[]};
+   if(role==='manager'){
+    const readList=(value,max)=>{if(!Array.isArray(value)||value.length>max||value.some(v=>typeof v!=='string'||!v.trim()||v.length>160))fail('Senarai akses Manager tidak sah.');return [...new Set(value.map(v=>v.trim()))];};
+    const access_branches=readList(body.access_branches||[],200),access_states=readList(body.access_states||[],20);
+    if(!access_branches.length&&!access_states.length)fail('Pilih sekurang-kurangnya satu negeri atau cawangan untuk Manager.');
+    const ready=await api('/rest/v1/report_profiles?select=access_branches,access_states&limit=0');
+    if(!ready.ok)fail('Akses Manager belum diaktifkan dalam pangkalan data. Jalankan setup/03-Manager-Access.sql di Supabase dahulu.',503);
+    const catalog=await api('/rest/v1/report_branches?select=name,state');if(!catalog.ok)fail('Liputan cawangan tidak dapat disemak.',502);
+    if(access_branches.some(n=>!catalog.data?.some(b=>b.name===n))||access_states.some(n=>!catalog.data?.some(b=>b.state===n)))fail('Pilih negeri dan cawangan yang disenaraikan.');
+    scope={access_branches,access_states};
+   }
    if(branch){const r=await api('/rest/v1/report_branches?name=eq.'+encodeURIComponent(branch)+'&select=name');if(!r.ok||!r.data?.length)fail('Pilih cawangan yang disenaraikan.');}
    const duplicate=await api('/rest/v1/report_profiles?username=eq.'+encodeURIComponent(username)+'&select=id');if(!duplicate.ok)fail('Username tidak dapat disemak.',502);if(duplicate.data?.some(u=>u.id!==existing?.id))fail('Username telah digunakan.');
    const password=body.password;if(password!==undefined&&(typeof password!=='string'||password.length<12||password.length>128))fail('Password mesti 12–128 aksara.');
@@ -44,12 +60,12 @@ export function createHandler({env=process.env,request=fetch}={}){
     const email=clean(body.email,'E-mel',254).toLowerCase();if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)||!password)fail('Masukkan e-mel dan password.');
     const created=await api('/auth/v1/admin/users',{method:'POST',body:{email,password,email_confirm:true}});if(!created.ok||!created.data?.id)fail('Akaun gagal dicipta. E-mel mungkin telah digunakan atau password ditolak.');
     const id=created.data.id;
-    const saved=await api('/rest/v1/report_profiles',{method:'POST',body:{id,email,name,username,role,branch,active:body.active}});
+    const saved=await api('/rest/v1/report_profiles',{method:'POST',body:{id,email,name,username,role,branch,...scope,active:body.active}});
     if(!saved.ok){const cleanup=await api('/auth/v1/admin/users/'+id,{method:'DELETE'});fail(cleanup.ok?'Profil gagal disimpan; akaun baharu dibatalkan.':'Profil gagal disimpan. Semak akaun baharu dalam Supabase Authentication.',502);}
     return respond({ok:true,id},201);
    }
    if(existing.id===callerId&&(role!=='admin'||!body.active))fail('Akaun yang sedang digunakan mesti kekal Admin aktif.');
-   const saved=await api('/rest/v1/report_profiles?id=eq.'+existing.id,{method:'PATCH',body:{name,username,role,branch,active:body.active}});if(!saved.ok)fail('Profil gagal dikemas kini. Pastikan admin aktif terakhir dikekalkan.');
+   const saved=await api('/rest/v1/report_profiles?id=eq.'+existing.id,{method:'PATCH',body:{name,username,role,branch,...scope,active:body.active}});if(!saved.ok)fail('Profil gagal dikemas kini. Pastikan admin aktif terakhir dikekalkan.');
    if(password){const changed=await api('/auth/v1/admin/users/'+existing.id,{method:'PUT',body:{password}});if(!changed.ok)fail('Profil telah disimpan tetapi password gagal dikemas kini.',502);}
    return respond({ok:true});
   }catch(e){return respond({error:e.status?e.message:'Perkhidmatan tidak tersedia. Cuba semula.'},e.status||503);}
