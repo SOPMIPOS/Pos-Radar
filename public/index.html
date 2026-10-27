@@ -11,6 +11,16 @@
 
 .logo.logo-image{display:block;position:relative;width:60px;height:40px;padding:3px;overflow:hidden;flex-shrink:0;background:#fff}.logo-image img{position:static;width:100%;height:100%;object-fit:contain;display:block}@media(max-width:760px){.logo.logo-image{width:48px;height:32px}}
 @media(max-width:480px){.logo.logo-image{width:36px;height:24px}}
+
+#page-reports .stats{grid-template-columns:repeat(5,minmax(0,1fr))}
+.status-stat{text-align:left;transition:border-color .15s,background .15s}
+.status-stat:hover{border-color:#8cb7d2;background:#1c2d3a}
+#activeReportsCard[aria-pressed="true"]{border-color:#d8b54a}
+#inactiveReportsCard[aria-pressed="true"]{border-color:#61bc9a}
+#inactiveReportsCard strong{color:#8ed9ad}
+@media(max-width:1000px){#page-reports .stats{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media(max-width:760px){#page-reports .stats{grid-template-columns:repeat(2,minmax(0,1fr))}#inactiveReportsCard{grid-column:1/-1}}
+
 /* Category colours stay fixed; yellow/orange/red indicate severity only. */
 .source-met{--source:#ae8cf7;--source-bg:#2c2345;--source-ink:#dfcfff}
 .source-ipu{--source:#55cdb7;--source-bg:#153831;--source-ink:#aff1e0}
@@ -56,7 +66,7 @@
 <section id="page-summary" class="page frame-page" hidden><iframe id="summaryFrame" class="old-frame" title="Ringkasan amaran dan operasi"></iframe></section>
 <section id="page-branches" class="page frame-page" hidden><iframe id="branchesFrame" class="old-frame" title="Pecahan negeri dan cawangan"></iframe></section>
 
-<section id="page-reports" class="page" hidden><div class="page-title"><div><h1>Laporan operasi</h1><p class="sub">Gangguan penghantaran yang dilaporkan oleh staf cawangan.</p></div><div class="row-actions"><button class="btn" id="reloadReports">Muat semula</button><button class="btn primary" id="addReport">+ Tambah laporan</button></div></div><div class="stats"><div class="stat"><strong id="statReports">0</strong><span>Laporan dipaparkan</span></div><div class="stat"><strong id="statBranches">0</strong><span>Cawangan</span></div><div class="stat"><strong id="statItems">0</strong><span>Jumlah item tertunda</span></div><div class="stat"><strong id="statActive">0</strong><span>Gangguan aktif</span></div></div>
+<section id="page-reports" class="page" hidden><div class="page-title"><div><h1>Laporan operasi</h1><p class="sub">Gangguan penghantaran yang dilaporkan oleh staf cawangan.</p></div><div class="row-actions"><button class="btn" id="reloadReports">Muat semula</button><button class="btn primary" id="addReport">+ Tambah laporan</button></div></div><div class="stats"><div class="stat"><strong id="statReports">0</strong><span>Laporan dipaparkan</span></div><div class="stat"><strong id="statBranches">0</strong><span>Cawangan</span></div><div class="stat"><strong id="statItems">0</strong><span>Jumlah item tertunda</span></div><button type="button" class="stat status-stat" id="activeReportsCard" aria-pressed="true" title="Klik untuk lihat laporan aktif mengikut carian dan negeri."><strong id="statActive">0</strong><span>Gangguan aktif</span></button><button type="button" class="stat status-stat" id="inactiveReportsCard" aria-pressed="false" title="Klik untuk lihat laporan yang telah selesai mengikut carian dan negeri."><strong id="statInactive">0</strong><span>Tidak aktif (Selesai)</span></button></div>
 <div class="filters"><span class="filter-label">Tapis</span><input id="reportSearch" placeholder="Cari cawangan, poskod, BIT atau lokasi" aria-label="Cari laporan"><select id="filterState" aria-label="Tapis negeri"><option value="">Semua negeri</option></select><select id="filterStatus" aria-label="Tapis status"><option value="active">Aktif</option><option value="resolved">Selesai</option><option value="">Semua status</option></select><button class="btn" id="resetFilters">Reset</button><button class="btn" id="exportReports">Muat turun CSV</button></div>
 <div class="table-wrap"><table><thead><tr><th rowspan="2">Tarikh / Status</th><th rowspan="2">Negeri / Pejabat</th><th rowspan="2">Cawangan / Poskod</th><th rowspan="2">Lokasi / Catatan</th><th rowspan="2">BIT</th><th colspan="4" style="text-align:center">ITEM TERTUNDA</th><th rowspan="2">Gambar</th><th rowspan="2">Disunting oleh</th><th rowspan="2">Tindakan</th></tr><tr><th class="num">Pos Laju</th><th class="num">Pos Daftar</th><th class="num">Mel</th><th class="num">Jumlah</th></tr></thead><tbody id="reportRows"></tbody></table></div><div class="table-foot"><span id="reportCount"></span><span>Aktif sahaja dipaparkan dalam Ringkasan dan pecahan cawangan.</span></div><p class="page-foot">Laporan disimpan dalam Supabase. Jumlah ialah baki item bagi laporan dipaparkan, bukan parcel unik. Laporan selesai kekal untuk rujukan. Masa suntingan mengikut Malaysia.</p></section>
 
@@ -626,18 +636,21 @@ $('loginForm').onsubmit=async event=>{
     const action=pendingAction;pendingAction=null;if(action)action();toast('Log masuk berjaya.');
   }catch(e){error('loginError',e.message);}finally{$('loginSubmit').disabled=false;}
 };
-function filteredReports(){
-  const text=$('reportSearch').value.toLowerCase().trim(),state=$('filterState').value,status=$('filterStatus').value;
+function filteredReports(ignoreStatus=false){
+  const text=$('reportSearch').value.toLowerCase().trim(),state=$('filterState').value,status=ignoreStatus?'':$('filterStatus').value;
   return reports.filter(r=>(!state||r.state===state)&&(!status||r.status===status)&&(!text||[r.branch,r.postcode,r.bit,r.remarks,r.updated_by_username||'',...r.locations].join(' ').toLowerCase().includes(text)));
 }
 function editTime(value){return value?new Date(value).toLocaleString('en-GB',{timeZone:'Asia/Kuala_Lumpur',day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit',hour12:false}):'—';}
 function renderReports(){
-  const rows=filteredReports(),sum=totals(rows);
-  $('statReports').textContent=rows.length;$('statBranches').textContent=new Set(rows.map(r=>r.branch)).size;$('statItems').textContent=sum.total.toLocaleString();$('statActive').textContent=rows.filter(r=>r.status==='active').length;
+  const rows=filteredReports(),scope=filteredReports(true),sum=totals(rows);
+  $('statReports').textContent=rows.length;$('statBranches').textContent=new Set(rows.map(r=>r.branch)).size;$('statItems').textContent=sum.total.toLocaleString();$('statActive').textContent=scope.filter(r=>r.status==='active').length;$('statInactive').textContent=scope.filter(r=>r.status==='resolved').length;
+  $('activeReportsCard').setAttribute('aria-pressed',String($('filterStatus').value==='active'));$('inactiveReportsCard').setAttribute('aria-pressed',String($('filterStatus').value==='resolved'));
   $('reportCount').textContent=rows.length+' laporan dipaparkan';
   $('reportRows').innerHTML=rows.length?rows.map(r=>'<tr><td>'+esc(fmtDate(r.report_date))+'<small><span class="status '+(r.status==='resolved'?'resolved':'')+'">'+(r.status==='active'?'Aktif':'Selesai')+'</span></small></td><td>'+esc(r.state)+'<small>'+esc(r.office_type)+'</small></td><td><b>'+esc(r.branch)+'</b><small>Poskod '+esc(r.postcode)+'</small></td><td><ul>'+r.locations.map(l=>'<li>'+esc(l)+'</li>').join('')+'</ul><small>'+esc(r.remarks)+'</small></td><td>'+esc(r.bit)+'</td><td class="num">'+r.poslaju+'</td><td class="num">'+r.posdaftar+'</td><td class="num">'+r.mel+'</td><td class="num"><b>'+r.total+'</b></td><td>'+(r.photo?'<button class="btn ghost" data-view-photo="'+r.id+'" aria-label="Lihat gambar '+esc(r.branch)+'"><img class="photo-thumb" src="'+esc(r.photo)+'" alt="Lokasi '+esc(r.branch)+'"></button>':'—')+'</td><td><b>'+esc(r.updated_by_username||'—')+'</b><small>'+esc(editTime(r.updated_at))+'</small></td><td>'+(canEdit(profile,r)?'<button class="btn" data-edit-report="'+r.id+'">Sunting</button>':'—')+'</td></tr>').join(''):'<tr><td class="empty" colspan="12">Tiada laporan untuk pilihan ini.</td></tr>';
 }
 for(const id of ['reportSearch','filterState','filterStatus'])$(id).addEventListener(id==='reportSearch'?'input':'change',renderReports);
+$('activeReportsCard').onclick=()=>{$('filterStatus').value='active';renderReports();};
+$('inactiveReportsCard').onclick=()=>{$('filterStatus').value='resolved';renderReports();};
 $('resetFilters').onclick=()=>{$('reportSearch').value=$('filterState').value='';$('filterStatus').value='active';renderReports();};
 $('reportRows').onclick=event=>{const photo=event.target.closest('[data-view-photo]');if(photo){const report=reports.find(r=>r.id===photo.dataset.viewPhoto);if(report?.photo){$('fullPhoto').src=report.photo;$('photoTitle').textContent=report.branch+' · '+report.postcode;$('photoDialog').showModal();}return;}const button=event.target.closest('[data-edit-report]');if(button)openReport(reports.find(r=>r.id===button.dataset.editReport));};
 function permittedBranches(){return branches.filter(b=>profile?.role==='admin'||b.name===profile?.branch);}
