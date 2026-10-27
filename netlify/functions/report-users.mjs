@@ -55,7 +55,7 @@ export function createHandler({env=process.env,request=fetch}={}){
    }
    if(branch){const r=await api('/rest/v1/report_branches?name=eq.'+encodeURIComponent(branch)+'&select=name');if(!r.ok||!r.data?.length)fail('Pilih cawangan yang disenaraikan.');}
    const duplicate=await api('/rest/v1/report_profiles?username=eq.'+encodeURIComponent(username)+'&select=id');if(!duplicate.ok)fail('Username tidak dapat disemak.',502);if(duplicate.data?.some(u=>u.id!==existing?.id))fail('Username telah digunakan.');
-   const password=body.password;if(password!==undefined&&(typeof password!=='string'||password.length<12||password.length>128))fail('Password mesti 12–128 aksara.');
+   const password=body.password;if(password!==undefined&&(typeof password!=='string'||password.length<8||password.length>128))fail('Password mesti 8–128 aksara.');
    if(req.method==='POST'){
     const email=clean(body.email,'E-mel',254).toLowerCase();if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)||!password)fail('Masukkan e-mel dan password.');
     const created=await api('/auth/v1/admin/users',{method:'POST',body:{email,password,email_confirm:true}});if(!created.ok||!created.data?.id)fail('Akaun gagal dicipta. E-mel mungkin telah digunakan atau password ditolak.');
