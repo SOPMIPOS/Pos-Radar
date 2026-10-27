@@ -28,7 +28,7 @@ MET and IPU map layers read the shared `/api/data` snapshot. JPS reads and parse
 
 Source failures show an error; a usable cached forecast is explicitly marked when stale. Forecasts refresh when returning to the page after ten minutes or when pressing Muat semula, while respecting upstream server cache expiry.
 
-27 automated local checks pass, including forecast conversion, Malaysian dates, interval preservation, cache/304/stale handling, missing data, UI rendering, login/roles, report edits and user management. A live MET Norway response for Kuala Lumpur and the live JPS notifications HTML were parsed successfully. Authenticated real account writes/uploads and the private Netlify runtime require verification in the owner's signed-in browser.
+33 automated local checks pass, including forecast conversion, Malaysian dates, interval preservation, cache/304/stale handling, missing data, UI rendering, login/roles, report edits and user management. A live MET Norway response for Kuala Lumpur and the live JPS notifications HTML were parsed successfully. Authenticated real account writes/uploads and the private Netlify runtime require verification in the owner's signed-in browser.
 
 The database admin-protection SQL above remains a required setup step. The Supabase secret has been configured for Deploy Previews; configure the Production context before publishing production. This branch does not modify the boss's repository or website.
 
@@ -39,3 +39,11 @@ Admin manages accounts and has all-branch reporting access. User (`staff`) keeps
 The migration adds `access_states` and `access_branches` arrays to `report_profiles`, expands the role constraint, validates the assignments and updates the existing `reporting_can_edit` function. Report and photo RLS policies and the report validation trigger already use this function, so database permission checks cover Managers too. State access is checked against the branch table, not a report's submitted state. Revoked or inactive access is enforced on subsequent writes.
 
 Deploying the new UI before running the migration preserves existing Admin/User access. Manager creation is explicitly refused before creating an Auth account if the database columns are absent. Run the migration, refresh the site, then add/edit an account with role Manager and select its scope. Test both an assigned and an unassigned branch using that Manager account.
+
+## Report deletion
+
+Sunting includes a Padam laporan button for an existing report, followed by a confirmation naming its branch, postcode, BIT and date. This is permanent deletion; Selesai remains the option for preserving history. Successful deletion refreshes report counts and broadcasts the updated active-report list to summary/branch frames.
+
+`DELETE /api/report-delete` verifies the Supabase user, reads the actual report branch and calls `reporting_can_edit` with the caller's JWT. It uses the server secret for the deletion only after authorisation, checks the expected report version and deletes the attached photo through the Storage API after the row is removed. If photo cleanup fails, deletion succeeds with an explicit warning. Direct browser DELETE privileges are not enabled, and no additional SQL migration is needed.
+
+Local tests verify confirmation, list/KPI updates, unauthorised/cross-origin rejection, caller-scoped permission checks, version conflicts and photo cleanup. No real report was deleted by automated tests.
