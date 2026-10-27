@@ -1,74 +1,109 @@
-# Pantau Cawangan — deploy ke Netlify
+# Pantau Cawangan
 
-Dashboard ini menanda cawangan Pos (PLC/DC) yang terjejas oleh amaran cuaca MET,
-amaran paras air JPS dan IPU tidak sihat (APIMS), bersama semua poskod di bawah
-cawangan itu. Butang **Kemas kini data** menarik data terkini terus dari sumber rasmi.
+A Pos Malaysia dashboard for weather monitoring and branch delivery-disruption reporting.
 
-## Kandungan folder
+**Status:** the first production version has been published and is ready for a small staff pilot. Netlify visitor access is configured separately from deployment; a published project can still be private.
 
-| Fail | Fungsi |
-|---|---|
-| `index.html` | Ringkasan: senarai cawangan terjejas, peta, semak poskod, laporan WhatsApp |
-| `cawangan.html` | Pecahan negeri → cawangan → butiran (sebab, daerah, poskod ikut SLA), muat turun CSV poskod terjejas. Pautan boleh dikongsi, cth. `cawangan.html#negeri=Johor&cawangan=Segamat%20(PLC)` |
-| `core.js` | Enjin data bersama (tarikan, padanan, pengiraan) untuk kedua-dua halaman |
-| `style.css` | Gaya bersama |
-| `pos-data.js` | 96 outlet, julat poskod + SLA, dan pemetaan daerah → cawangan (daripada Postcode Listing) |
-| `netlify/functions/data.mjs` | Fungsi pelayan `/api/data`: menarik MET, APIMS dan JPS, menyimpan satu salinan untuk semua pengguna (Netlify Blobs), dan menguatkuasakan had kemas kini 30 minit |
-| `package.json` | Pakej `@netlify/blobs` untuk fungsi di atas |
-| `netlify.toml` | Tetapan Netlify |
+Repository documentation is written in English. Website labels and operational wording remain in Malay.
 
-## Cara deploy (pilih satu)
+## What the application does
 
-**Jangan guna drag-and-drop.** Netlify Drop tidak menjalankan fungsi, jadi data tidak dikongsi,
-had 30 minit hanya untuk pelayar masing-masing, dan IPU serta JPS tidak dapat ditarik.
+- Shows daily and hourly weather forecasts, including temperature and precipitation for the source's stated time intervals.
+- Displays MET weather warnings, APIMS air-quality readings and JPS flood/water-level warnings with distinct category colours.
+- Highlights potentially affected branches and their postcode coverage.
+- Collects operational reports with branch, postcode, multiple locations, BIT route code, pending-item counts, remarks and optional photos.
+- Records the last editor's username and update time.
+- Shows active operational disruptions in summary and branch views; resolved reports remain in operations history.
+- Supports report search, filters, CSV export, active/resolved totals and confirmed permanent deletion.
+- Provides Admin, Manager and User accounts.
 
-### A. Netlify CLI (paling cepat)
-```bash
-npm install -g netlify-cli
-netlify login
-cd pantau-cawangan
-npm install          # pasang @netlify/blobs (sekali sahaja)
-netlify deploy --prod
-```
-Bila ditanya, pilih "Create & configure a new site". Publish directory: `.`
+Weather warnings and branch matching support operational review; they are not proof that every postcode or parcel in a flagged branch is affected.
 
-### B. GitHub
-1. Muat naik folder ini ke repo GitHub baharu.
-2. Netlify → Add new site → Import an existing project → pilih repo.
-3. Build command: kosongkan. Publish directory: `.` → Deploy. (Netlify memasang `@netlify/blobs` secara automatik daripada `package.json`.)
+## Pages
 
-Selepas deploy, buka laman dan semak tiga titik status di bahagian atas (MET, APIMS, JPS)
-semuanya hijau.
+| Website page | Purpose |
+| --- | --- |
+| Laporan kaji cuaca | Daily and hourly forecasts, location/postcode search and weather monitoring maps |
+| Ringkasan | Summary of affected branches and active operational disruptions |
+| Pecahan negeri & cawangan | State and branch breakdown, reasons and postcode coverage by SLA |
+| Laporan operasi | Create and maintain delivery-disruption reports; view active and resolved records |
+| Urus pengguna | Admin-only account and access management |
 
-## Cara cawangan ditanda terjejas
+## Accounts and access
 
-- **Amaran MET** (data.gov.my): nama negeri/daerah dalam teks amaran dipadankan dengan
-  daerah setiap cawangan. Daerah dipetakan ke cawangan menggunakan poskod bandar utama
-  setiap daerah dalam Postcode Listing. Buletin laut dan nasihat siklon diabaikan.
-- **IPU** (APIMS): stesen > 100 menanda cawangan dalam radius 20 km (jika tiada, cawangan
-  terdekat sehingga 60 km). >100 Waspada, >150 Buruk, >200 Bahaya.
-- **JPS** (Public Infobanjir, Amaran Semasa): stesen Waspada/Amaran/Bahaya dipadankan
-  melalui nama daerah lokasi stesen.
-- Tempoh **Sekarang / Hari ini / 7 hari**: amaran MET 7 hari ditarik setiap kali.
-  IPU dan JPS hanya ada bacaan semasa — sejarahnya dikumpul dalam pelayar setiap kali
-  butang ditekan.
+| Role | Reporting access | Account administration |
+| --- | --- | --- |
+| Admin | All branches | Yes |
+| Manager | Assigned whole states and/or individual branches, combined | No |
+| User (stored as staff) | One assigned branch | No |
 
-## Nota penggunaan
+Report reading is public at the application/database level. Adding, editing and deleting reports require an active authorised account. Netlify project visibility can additionally restrict access to the entire website.
 
-- **Had kemas kini 30 minit untuk semua pengguna.** Bila sesiapa menekan "Kemas kini data", butang dikunci untuk semua orang selama 30 minit dan menunjukkan baki minit. Had ini dikuatkuasakan di pelayan, jadi tidak boleh dielak dengan muat semula halaman atau pelayar lain.
-- Semua pengguna melihat data yang sama. Halaman yang sedang dibuka menyemak setiap 2 minit dan memaparkan data baharu secara automatik bila pengguna lain mengemas kini.
-- Kali pertama selepas deploy (belum ada data), data ditarik sekali secara automatik.
-- Jika semua sumber gagal semasa kemas kini, butang tidak dikunci dan data terakhir kekal dipaparkan.
-- Sejarah IPU 7 hari disimpan di pelayan (sama untuk semua). Sejarah JPS dikumpul dalam pelayar setiap pengguna.
-- Pilihan tempoh (Sekarang / Hari ini / 7 hari) dikongsi antara kedua-dua halaman.
-- CSV mengandungi setiap poskod di bawah cawangan terjejas: Poskod, Cawangan, Negeri, SLA, Tahap, Sebab. Dibuka terus dalam Excel.
+Deletion is permanent and requires confirmation. Use the resolved status (Selesai) when the record should remain in history.
 
-## Had yang perlu diketahui
+## Repository files
 
-- Satu cawangan meliputi beberapa daerah, jadi semua poskod cawangan ditanda bila mana-mana
-  daerahnya terjejas.
-- Jalan ditutup (JKR Bencana Alam) belum ditarik secara automatik.
-- Format halaman JPS boleh berubah tanpa notis; jika status JPS gagal, semak terus
-  di publicinfobanjir.water.gov.my/cerapan/amaran-semasa/.
-- Untuk kemas kini senarai poskod/cawangan, hantar Postcode Listing baharu dan jana semula
-  `pos-data.js`.
+| Path | Purpose |
+| --- | --- |
+| public/index.html | Current deployed application, including its bundled UI and embedded summary/branch views |
+| public/assets/pos-malaysia.svg | Supplied Pos Malaysia logo |
+| netlify/functions/ | Server endpoints for shared warnings, forecasts, login, account administration and report deletion |
+| netlify/functions/lib/ | Forecast conversion/cache support and JPS parsing |
+| setup/02-Admin-Protection.sql | Database protection for active Admin accounts |
+| setup/03-Manager-Access.sql | Manager state/branch access migration |
+| netlify.toml | Netlify publish directory, functions directory and response headers |
+| package.json | Server dependency declaration |
+| NETLIFY-SETUP.md | Deployment, environment variables, database prerequisites and verification |
+| Root index.html, cawangan.html, core.js, style.css, pos-data.js and proxy.mjs | Original weather application/reference files retained from the earlier version |
+
+**Netlify publishes public, not the repository root.** Editing only the old root HTML or JavaScript files does not update the deployed bundled application. The current public/index.html is a prebuilt artifact; its separate authoring/build sources and automated test suite are not currently committed in this repository. Add those sources before establishing a repeatable local build workflow.
+
+## Branches, commits and pull requests
+
+- **main** holds the approved production version. Updates to it trigger the linked Netlify production deployment.
+- **codex/supabase-reporting-ui** was the development branch used for the reporting and forecast upgrade. Its changes were merged into main through [pull request #1](https://github.com/hudahaz/Weather-App/pull/1). It remains as the old development branch; it is not a second live application.
+- A **commit** is a saved set of changes with a description and history.
+- A **pull request** groups proposed changes for review and testing before merging them into main.
+- A **Deploy Preview** is a Netlify test URL for proposed changes. Production is the main website address.
+
+For future features, create a new branch from the latest main, test its Deploy Preview, then merge the approved pull request. Updating documentation does not require changing the website UI.
+
+## Hosting and database
+
+Netlify hosts the application and server functions. Supabase stores operational reports, account profiles, access assignments and photos; Supabase Auth manages login sessions.
+
+The publish directory is public. No build command is currently required. Follow [NETLIFY-SETUP.md](NETLIFY-SETUP.md) for environment variables and database prerequisites.
+
+The supplied project URL and publishable key are intended for browser use. Keep the Supabase secret/service-role key exclusively in server environment variables; never commit it.
+
+The website address is managed in Netlify and may change when the project is renamed. A custom domain is optional.
+
+## Data sources and limitations
+
+- **Forecasts:** MET Norway Locationforecast, credited under CC BY 4.0. Forecasts preserve the provider's actual one-hour/six-hour intervals; rainfall is shown in mm for the specified period. Daily cards summarise available forecast points.
+- **MET warnings:** official warning data obtained through the shared data endpoint.
+- **IPU:** APIMS station readings, with accumulated shared history.
+- **JPS:** current Public Infobanjir homepage notifications; historical readings are accumulated in the browser.
+- **Time:** displayed operational and forecast times use Malaysia time.
+- **Branch/postcode master:** the inherited snapshot contains 96 branches and 357 postcode ranges. Coverage, state assignments and SLA values need confirmation against the current operational master.
+
+Sekarang, Hari ini and 7 hari can show the same affected branches when current warnings overlap or older records have not been collected. These controls do not provide a complete historical archive.
+
+Maps show forecast locations, branches and monitoring stations, not flood boundaries or radar. A branch can cover several areas; an alert matched to one area may flag the whole branch.
+
+**Historical flood prediction using previous years' records is not implemented.** Matching a past flood date to the same date this year would only be a historical reminder, not a reliable flood forecast.
+
+Shared warning refresh is limited to once per 30 minutes. Open summary/branch pages poll the shared snapshot every two minutes. Provider failures may leave explicitly stale cached data or an error; check source timestamps.
+
+## Verification and next steps
+
+At the initial production release, 33 automated checks passed in the authoring workspace. They covered login and access, Manager scope, report editing/deletion, forecasts, JPS parsing and warning refresh. The owner also confirmed report persistence and Manager access in the deployed preview. These tests are not currently included in the repository.
+
+Before wider rollout:
+1. Confirm branch/postcode/SLA master data.
+2. Remove or resolve clearly labelled test reports.
+3. Test production login, permissions, report creation/editing, photos, resolution and deletion with test data.
+4. Choose the website name and Netlify visitor access appropriate for the intended audience.
+5. Gather feedback from a small group of staff.
+
+Future work includes collecting suitable historical flood records and linking event locations to delivery areas.
