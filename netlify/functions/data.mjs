@@ -3,6 +3,7 @@
 // GET  /api/data?since=<t>  → {unchanged:true} jika tiada data baharu sejak t
 // POST /api/data            → tarik data baharu, HANYA jika sudah 30 minit sejak tarikan terakhir
 import { getStore } from "@netlify/blobs";
+import { parseJpsNotifications } from "./lib/jps-parser.mjs";
 
 const MIN_GAP = 30 * 60e3;   // had kemas kini: sekali setiap 30 minit untuk semua pengguna
 const LOCK_MS = 2 * 60e3;    // elak dua tarikan serentak
@@ -15,7 +16,7 @@ function mytStamp(t) {
 const SRC = {
   met: () => `https://api.data.gov.my/weather/warning?limit=500&timestamp_start=${encodeURIComponent(mytStamp(Date.now() - 7 * DAY) + "@warning_issue__issued")}`,
   ipu: () => "https://eqms.doe.gov.my/api3/publicmapproxy/PUBLIC_DISPLAY/CAQM_MCAQM_Current_Reading/MapServer/0/query?where=1%3D1&outFields=STATION_ID%2CSTATION_LOCATION%2CPLACE%2CSTATE_NAME%2CAPI%2CCLASS%2CDATETIME%2CLATITUDE%2CLONGITUDE&returnGeometry=false&f=json",
-  jps: () => "https://publicinfobanjir.water.gov.my/cerapan/amaran-semasa/",
+  jps: () => "https://publicinfobanjir.water.gov.my/",
 };
 
 async function pull(url, kind) {
@@ -35,12 +36,7 @@ const slimMet = (d) => (Array.isArray(d) ? d : (d && d.data) || []).map((w) => (
   text_bm: w.text_bm, text_en: w.text_bm ? undefined : w.text_en,
 }));
 const slimIpu = (d) => ({ features: ((d && d.features) || []).map((f) => ({ attributes: f.attributes || {} })) });
-const slimJps = (html) => String(html)
-  .replace(/<head[\s\S]*?<\/head>/i, "")
-  .replace(/<(script|style|svg|noscript|nav|footer)[\s\S]*?<\/\1>/gi, "")
-  .replace(/<!--[\s\S]*?-->/g, "")
-  .replace(/\s{2,}/g, " ")
-  .slice(0, 600000);
+const slimJps = parseJpsNotifications;
 
 const json = (o, status = 200) => new Response(JSON.stringify(o), {
   status, headers: { "content-type": "application/json; charset=utf-8", "cache-control": "no-store" },
@@ -86,10 +82,14 @@ export default async (req) => {
   const sources = {};
   let anyOk = false;
   for (const [k, [r, slim]] of Object.entries(res)) {
-    if (r.status === "fulfilled") { sources[k] = { ok: true, data: slim(r.value), fetchedAt: now }; anyOk = true; }
-    else {
+    let failure=r.status==="rejected"?r.reason:null;
+    if(r.status==="fulfilled"){
+      try{sources[k]={ok:true,data:slim(r.value),fetchedAt:now};anyOk=true;continue;}
+      catch(error){failure=error;}
+    }
+    {
       const old = prev.sources && prev.sources[k];
-      const err = String((r.reason && r.reason.message) || r.reason || "gagal");
+      const err = String((failure && failure.message) || failure || "gagal");
       sources[k] = old && old.data != null ? { ...old, ok: false, stale: true, err } : { ok: false, err };
     }
   }
@@ -110,3 +110,4 @@ export default async (req) => {
 };
 
 export const config = { path: "/api/data" };
+
