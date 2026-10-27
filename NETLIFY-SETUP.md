@@ -4,7 +4,7 @@ This guide describes the current production application in hudahaz/Weather-App. 
 
 ## Current deployment
 
-The approved dashboard was merged into main through pull request #1 and published to Netlify. The linked project was originally named gorgeous-kitsune-f792c1; its name and URL can be changed in Netlify.
+The approved dashboard was merged into main through pull request #1 and published to Netlify. The linked project is now named posweather (previously gorgeous-kitsune-f792c1). Its production URL is https://posweather.netlify.app/. The owner screenshot confirms it is Published and still Private.
 
 - Production branch: main
 - Publish directory: public
@@ -19,7 +19,7 @@ Use the existing linked Netlify project. Do not create another project for a rou
 
 Set SUPABASE_SECRET_KEY in Netlify environment variables with access for Functions. A legacy SUPABASE_SERVICE_ROLE_KEY is also accepted by the server code.
 
-The owner confirmed configuration for both Deploy Previews and Production during initial setup. Verify the relevant context when troubleshooting a new deployment. Environment-variable changes require a new deployment to take effect.
+On 27 October 2026, an incorrect Production secret caused username login and user management to fail while direct email login still worked. The owner corrected the Production secret, redeployed and confirmed both services work. Check the actual value and Functions scope in the relevant context when troubleshooting; a populated field alone does not prove the key is valid. Environment-variable changes require a new deployment to take effect.
 
 Copy secret values directly from Supabase to Netlify. Never put them in GitHub, browser code, screenshots or chat. The Supabase project URL and publishable key are already included in the application and are intended for browser use.
 
@@ -37,6 +37,8 @@ The Admin migration protects the last active Admin. The Manager migration adds s
 
 ## Accounts
 
+Account management accepts new passwords of 8–128 characters. Supabase may enforce additional password policy requirements. Existing passwords are unchanged.
+
 Admin has all-branch reporting and account management. User (staff) has one branch. Manager has the union of selected whole states and named branches, without account administration.
 
 Supabase Auth verifies sessions. Server account-management endpoints require an active Admin profile. Report and photo writes are scoped by database permission checks; report editor attribution and update times are assigned by the database.
@@ -50,6 +52,20 @@ A successful production deployment does not automatically make a Private project
 Public production access lets anyone with the URL read the website's public content; adding/editing/deleting reports still requires application login and the correct access scope. Keep the site's intended audience in mind when choosing visibility.
 
 Change the project/site name in Netlify to change the default netlify.app address. Update any shared bookmarks after renaming. Preview addresses also depend on the project name.
+
+## Password recovery — unfinished
+
+The current app has no recovery/change-password screen or recovery-token handling. A reset email alone will not complete a password change. Supabase Authentication > URL Configuration should use https://posweather.netlify.app as the Site URL instead of localhost; add the exact recovery redirect URL when that screen is implemented. Recovery must then be tested with a fresh email link. Do not treat the Site URL change as a complete recovery fix.
+
+## Troubleshooting login and user management
+
+If email login works but username login and Urus pengguna fail, inspect the server connection first:
+1. In Supabase Settings > API Keys, copy the project's secret key using its copy control.
+2. Set SUPABASE_SECRET_KEY in Netlify for Production with Functions scope. Keep it server-only and avoid extra whitespace or line breaks.
+3. Save and trigger a new production deploy, then retest after Published.
+4. If the problem persists, inspect the report-login/report-users function logs without exposing keys or session tokens.
+
+A blank user list after a service error does not mean accounts were deleted. Renaming the same Netlify project does not require recreating Supabase accounts. Avoid creating duplicate accounts to repair a loading error.
 
 ## Server endpoints
 
@@ -84,7 +100,7 @@ Direct browser DELETE privileges are not enabled. No additional deletion SQL mig
 7. Test permanent deletion only on disposable test data.
 8. Resolve or delete test reports before wider rollout.
 
-At the initial release, 33 automated checks passed in the authoring workspace. The test suite and separate build sources are not currently committed in this repository. The owner confirmed report persistence and Manager access in the deployed preview; production authenticated operations should still be checked in the owner's browser.
+After the password-minimum update, 34 automated checks passed in the authoring workspace, including the eight-character password boundary. The test suite and separate build sources are not currently committed in this repository. The owner confirmed report persistence and Manager access in the deployed preview. The owner subsequently confirmed production email/username login and user management after correcting the Production secret; other operations should still be tested with disposable data during the staff pilot.
 
 ## Future changes
 

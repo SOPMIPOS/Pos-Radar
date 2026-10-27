@@ -2,7 +2,9 @@
 
 A Pos Malaysia dashboard for weather monitoring and branch delivery-disruption reporting.
 
-**Status:** the first production version has been published and is ready for a small staff pilot. Netlify visitor access is configured separately from deployment; a published project can still be private.
+**Website:** [posweather.netlify.app](https://posweather.netlify.app/)
+
+**Status (27 October 2026):** production is published. The owner confirmed that email login, username login and user management work after correcting the Production Supabase secret and redeploying. The Netlify project is still Private, so access must be configured before sharing with staff.
 
 Repository documentation is written in English. Website labels and operational wording remain in Malay.
 
@@ -38,6 +40,10 @@ Weather warnings and branch matching support operational review; they are not pr
 | User (stored as staff) | One assigned branch | No |
 
 Report reading is public at the application/database level. Adding, editing and deleting reports require an active authorised account. Netlify project visibility can additionally restrict access to the entire website.
+
+New passwords entered through account management must contain 8–128 characters. Supabase's own password policy also applies. Existing passwords are unchanged.
+
+**Password recovery is not complete:** the application does not yet include a recovery/change-password screen or recovery-link handling. Supabase's Site URL should use https://posweather.netlify.app rather than localhost, but correcting the URL alone does not complete recovery.
 
 Deletion is permanent and requires confirmation. Use the resolved status (Selesai) when the record should remain in history.
 
@@ -97,13 +103,13 @@ Shared warning refresh is limited to once per 30 minutes. Open summary/branch pa
 
 ## Verification and next steps
 
-At the initial production release, 33 automated checks passed in the authoring workspace. They covered login and access, Manager scope, report editing/deletion, forecasts, JPS parsing and warning refresh. The owner also confirmed report persistence and Manager access in the deployed preview. These tests are not currently included in the repository.
+After the eight-character password update, 34 automated checks passed in the authoring workspace, including accepting eight characters and rejecting seven for account creation and password updates. They covered login and access, Manager scope, report editing/deletion, forecasts, JPS parsing and warning refresh. The owner also confirmed report persistence and Manager access in the deployed preview. These tests are not currently included in the repository.
 
 Before wider rollout:
 1. Confirm branch/postcode/SLA master data.
 2. Remove or resolve clearly labelled test reports.
 3. Test production login, permissions, report creation/editing, photos, resolution and deletion with test data.
-4. Choose the website name and Netlify visitor access appropriate for the intended audience.
+4. Configure Netlify visitor access for the intended audience; the website has already been renamed to posweather.
 5. Gather feedback from a small group of staff.
 
-Future work includes collecting suitable historical flood records and linking event locations to delivery areas.
+Outstanding work includes completing email password recovery and collecting suitable historical flood records to link event locations to delivery areas.
