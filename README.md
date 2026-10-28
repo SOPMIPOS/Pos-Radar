@@ -18,7 +18,7 @@ Repository documentation is written in English. Website labels and operational w
 - Shows active operational disruptions in summary and branch views; resolved reports remain in operations history.
 - Supports report search, inclusive report-date ranges (blank dates mean all dates), CSV export, active/resolved totals and confirmed permanent deletion.
 - Provides a download dialog with independent search, state, PPL, date and active/inactive/both status filters, initially copied from the page filters. CSV files include report age and time since the last update.
-- Shows report age in Malaysia calendar days and update-age buckets. Active reports with more than 72 elapsed hours since the last update are flagged red; resolved reports are excluded from overdue flags. Ageing follows the current page filters and refreshes every minute while the reports page is open.
+- Shows report age in Malaysia calendar days in the table and one red overdue card alongside the top KPIs. Active reports with more than 72 elapsed hours since the last update are flagged red; resolved reports are excluded. Clicking the overdue card toggles an overdue-only active-report filter, respects date/state/search filters and carries that selection into the download dialog. Reset or selecting another status clears the overdue filter. Ageing refreshes every minute while the reports page is open.
 - Provides a PPL selector on Ringkasan, narrowed by state, for branch summary counts, affected branch cards, map markers and the WhatsApp report. MET/IPU/JPS source tables remain overall reference tables.
 - Provides Admin, Manager and User accounts.
 
@@ -106,7 +106,7 @@ Shared warning refresh is limited to once per 30 minutes. Open summary/branch pa
 
 ## Verification and next steps
 
-After the report-filter and ageing update, 38 automated checks passed in the authoring workspace, covering inclusive/default/reset date filters, independent active/inactive/both CSV filtering, PPL scope and the strict 72-hour ageing threshold, in addition to the existing access and forecast checks. They covered login and access, Manager scope, report editing/deletion, forecasts, JPS parsing and warning refresh. The owner also confirmed report persistence and Manager access in the deployed preview. These tests are not currently included in the repository.
+After the report-filter and ageing update, 39 automated checks passed in the authoring workspace, covering inclusive/default/reset date filters, independent active/inactive/both CSV filtering, PPL scope and the strict 72-hour ageing threshold, in addition to the existing access and forecast checks. They covered login and access, Manager scope, report editing/deletion, forecasts, JPS parsing and warning refresh. The owner also confirmed report persistence and Manager access in the deployed preview. These tests are not currently included in the repository.
 
 Before wider rollout:
 1. Confirm branch/postcode/SLA master data.
