@@ -81,10 +81,11 @@
 <div id="newOutlook" role="tabpanel" aria-labelledby="newOutlookTab" hidden>
 <div class="outlook-intro"><div><h1>Tinjauan 30 hari</h1><p class="sub" id="outlookRange"></p></div><button type="button" id="historyReload" class="btn">Muat semula sejarah</button></div>
 <div class="outlook-note"><b>Ramalan semasa dan rujukan sejarah mempunyai tujuan berbeza.</b> Hari 1–7 menggunakan ramalan yang tersedia untuk lokasi dipilih dalam tab Ramalan 7 hari. Hari 8–30 menunjukkan rekod pada tarikh sama tahun lepas, mengikut negeri/kawasan. Sejarah bukan ramalan bencana akan berulang. Tiada rekod tidak bermakna kawasan selamat.</div>
-<div class="outlook-filters"><label>Negeri (sejarah)<select id="outlookState"><option value="">Semua negeri</option></select></label><label>Jenis bencana (sejarah)<select id="outlookType"><option value="">Semua bencana</option></select></label></div>
+<div class="outlook-filters"><label>Negeri (sejarah & operasi)<select id="outlookState"><option value="">Semua negeri</option></select></label><label>Jenis bencana (sumber luar sahaja)<select id="outlookType"><option value="">Semua bencana</option></select></label></div>
 <p class="hint" id="historyCoverage" aria-live="polite"></p><div class="error" role="alert" id="outlookError" hidden></div>
+<details class="panel operations-current"><summary><b>Gangguan operasi semasa</b> · <span id="currentOperationsCount"></span></summary><p class="hint">Laporan aktif Pos Malaysia setakat sekarang. Ini bukan ramalan gangguan bagi hari akan datang; laporan lama yang masih aktif mungkin memerlukan semakan staf.</p><div id="currentOperationsRecords"></div><button id="showCurrentOperations" type="button" class="btn">Lihat semua laporan aktif</button></details>
 <div id="outlookCalendar" class="outlook-calendar" aria-label="Pilih tarikh tinjauan"></div>
-<div class="section-head"><h2 id="outlookDate"></h2></div><p class="hint" id="outlookBasis"></p><div id="outlookRecords" aria-live="polite"></div>
+<div class="section-head"><h2 id="outlookDate"></h2></div><p class="hint" id="outlookBasis"></p><div id="outlookRecords" aria-live="polite"></div><section class="panel operation-history" aria-labelledby="historicalOperationsTitle"><h2 id="historicalOperationsTitle">Sejarah laporan operasi</h2><p class="hint">Laporan dalaman pada tarikh sama tahun lepas, termasuk yang kini Selesai. Tarikh laporan ialah tarikh pemerhatian, bukan semestinya tarikh mula kejadian. Semua punca gangguan disertakan; ia tidak secara automatik dikategorikan sebagai banjir. Tapisan jenis bencana di atas hanya untuk sumber luar.</p><div id="historicalOperationsRecords"></div><button type="button" class="btn" id="showHistoricalOperations" hidden>Lihat laporan asal</button><p class="hint">Rujukan tahun berikutnya tersedia selagi laporan kekal disimpan. Gunakan Selesai untuk menyimpan sejarah. Laporan yang dipadam kekal tidak akan muncul. Nilai tersimpan bukan salinan setiap hari sebelum suntingan.</p></section>
 <p class="page-foot">Rekod ialah rujukan lokasi/tarikh, bukan bilangan bencana unik. Kejadian berterusan dan laporan pemerhatian boleh muncul lebih daripada sekali. Rekod ditandakan untuk semakan tidak diterbitkan. Tiada padanan PPL, PSM atau SLA dibuat untuk sejarah.</p>
 </div></section>
 
@@ -619,7 +620,7 @@ const options=(value,label=value)=>'<option value="'+esc(value)+'">'+esc(label)+
 const branches=POS_DATA.outlets.map(o=>({name:o.n,state:o.s,office_type:o.type==='PSM'?'Other':(o.n.match(/\((PLC|DC|LDC)\)/)||[])[1]||'Other',branch_type:o.type||null,coordinates:o.c}));
 const ranges=POS_DATA.outlets.flatMap(o=>o.r.map(([a,b,i])=>({branch:o.n,postcode_from:a,postcode_to:b,sla:Number.isInteger(i)?POS_DATA.sla[i]:null})));
 const today=myToday();
-let reports=[],users=[];
+let reports=[],users=[],reportsLoaded=false;
 let overdueOnly=false;
 let profile=null,currentPage='weather',pendingAction=null,editingReport=null,editingUser=null,locations=[],photoPreviewUrl=null;
 const activeReports=()=>reports.filter(r=>r.status==='active');
@@ -652,6 +653,7 @@ function navigate(page){
   window.scrollTo({top:0,behavior:'instant'});
 }
 function broadcast(){
+  document.dispatchEvent(new Event('pantau:reports'));
   for(const id of ['summaryFrame','branchesFrame'])if($(id).dataset.ready)$(id).contentWindow?.postMessage({type:'pantau-reports',reports:activeReports()},'*');
 }
 window.addEventListener('message',event=>{
@@ -976,7 +978,7 @@ async function initialiseWarnings(){
 liveWarnings.onChange(()=>{renderWeatherWarnings();if(mapMode!=='weather')renderWeatherMap();});
 
 function showConnectionError(e){$('connectionStatus').textContent=e.message;$('connectionStatus').hidden=false;}
-async function refreshReports(){reports=await db().reports();$('connectionStatus').hidden=true;renderReports();broadcast();}
+async function refreshReports(){reports=await db().reports();reportsLoaded=true;$('connectionStatus').hidden=true;renderReports();broadcast();}
 async function refreshUsers(){if(!isAdmin())return;try{users=await db().users();error('userError');renderUsers();}catch(e){error('userError',e.message);}}
 $('reloadReports').onclick=()=>refreshReports().catch(showConnectionError);
 async function initialise(){
@@ -989,7 +991,7 @@ async function initialise(){
 }
 window.addEventListener('focus',()=>{refreshReports().catch(showConnectionError);if(currentPage==='weather'&&(!forecast||Date.now()-forecast.loadedAt>10*60e3)){loadForecast();initialiseWarnings();}});
 window.__ui={navigate,activeReports,filteredReports,openReport,editUser,renderReports,renderUsers,requestDeleteUser,broadcast,renderWeather,getReports:()=>reports,getUsers:()=>users,getProfile:()=>profile};
-window.__history={context:()=>({forecast,city,profile}),request:(action,body)=>db().history(action,body),goToForecast:date=>{navigate('weather');const index=forecast?.daily.findIndex(d=>d.date===date);if(index>=0){selectedDay=index;renderWeather();}}};
+window.__history={context:()=>({forecast,city,profile,reports,reportsLoaded}),refreshReports:()=>refreshReports().catch(showConnectionError),openReports:({state='',date='',status='active'}={})=>{overdueOnly=false;navigate('reports');$('filterState').value=state;$('filterStatus').value=status;$('reportSearch').value='';$('filterDateFrom').value=$('filterDateTo').value=date||'';renderReports();},request:(action,body)=>db().history(action,body),goToForecast:date=>{navigate('weather');const index=forecast?.daily.findIndex(d=>d.date===date);if(index>=0){selectedDay=index;renderWeather();}}};
 window.__ready=initialise();
 
 window.addEventListener('load',()=>renderWeatherMap());

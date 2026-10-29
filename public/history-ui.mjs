@@ -1,4 +1,4 @@
-import { rollingDates, previousYear, recordsForDay, typeLabel, HEADERS, malaysiaToday } from './history-core.mjs';
+import { rollingDates, previousYear, recordsForDay, typeLabel, HEADERS, malaysiaToday, currentOperations, operationsForDay } from './history-core.mjs';
 const $=id=>document.getElementById(id);
 const e=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const format=date=>new Date(date+'T00:00:00Z').toLocaleDateString('ms-MY',{day:'numeric',month:'long',year:'numeric',timeZone:'UTC'});
@@ -20,20 +20,32 @@ async function loadHistory(){
 }
 function render(){
  const next=rollingDates();if(next[0]!==dates[0]){dates=next;selected=0;}
- const {forecast,city}=bridge()?.context()||{};
+ const {forecast,city,reports=[],reportsLoaded=false}=bridge()?.context()||{};
+ options('outlookState',[...new Set([...(snapshot?.summary.states||[]),...reports.map(r=>r.state)])].sort(),'Semua negeri');
  $('historyCoverage').textContent=snapshot?metadata(snapshot)+(snapshot.updatedAt?' Dikemas kini '+new Date(snapshot.updatedAt).toLocaleString('ms-MY',{timeZone:'Asia/Kuala_Lumpur'})+' oleh '+snapshot.updatedBy+'.':' Set permulaan telah dimuatkan.'):'Memuatkan rekod sejarah…';
  showError('outlookError',historyError+(historyError&&snapshot?' Memaparkan salinan terakhir yang berjaya dimuatkan.':''));
  $('outlookRange').textContent=format(dates[0])+' – '+format(dates.at(-1));
  const rows=snapshot?.records||[],state=$('outlookState').value,type=$('outlookType').value;
+ const active=currentOperations(reports,dates[0],state);
+ $('currentOperationsCount').textContent=reportsLoaded?active.length+' laporan aktif':'Belum dimuatkan';
+ $('currentOperationsRecords').innerHTML=!reportsLoaded?'<p>Laporan operasi belum dapat dimuatkan. Tiada kesimpulan dibuat tentang gangguan semasa.</p>':active.length?active.slice(0,4).map(r=>operationCard(r,false)).join('')+(active.length>4?'<p class="hint">4 daripada '+active.length+' laporan ditunjukkan.</p>':''):'<p>Tiada laporan operasi aktif yang dimuatkan untuk negeri dipilih.</p>';
  $('outlookCalendar').innerHTML=dates.map((date,i)=>{
-  const records=recordsForDay(rows,date,state,type),daily=i<7?forecast?.daily?.find(d=>d.date===date):null;
-  return '<button type="button" class="outlook-day '+(i<7?'live':records.length?'history':'')+'" data-outlook-day="'+i+'" aria-pressed="'+(selected===i)+'"><span class="day-label">'+new Date(date+'T00:00:00Z').toLocaleDateString('ms-MY',{day:'numeric',month:'short',timeZone:'UTC'})+'</span><span class="day-source">'+(i<7?'Ramalan semasa':'Sejarah '+(Number(date.slice(0,4))-1))+'</span><b>'+(i<7?(daily?Math.round(daily.low)+'° – '+Math.round(daily.high)+'°':'Ramalan belum tersedia'):records.length?records.length+' rekod':snapshot?'Rekod belum tersedia':'Data belum tersedia')+'</b></button>';
+  const records=recordsForDay(rows,date,state,type),ops=operationsForDay(reports,date,state),daily=i<7?forecast?.daily?.find(d=>d.date===date):null;
+  return '<button type="button" class="outlook-day '+(i<7?'live':records.length||ops.length?'history':'')+'" data-outlook-day="'+i+'" aria-pressed="'+(selected===i)+'"><span class="day-label">'+new Date(date+'T00:00:00Z').toLocaleDateString('ms-MY',{day:'numeric',month:'short',timeZone:'UTC'})+'</span><span class="day-source">'+(i<7?'Ramalan semasa':'Sejarah '+(Number(date.slice(0,4))-1))+'</span><b>'+(i<7?(daily?Math.round(daily.low)+'° – '+Math.round(daily.high)+'°':'Ramalan belum tersedia'):[records.length?records.length+' rekod sumber luar':'',ops.length?ops.length+' laporan operasi':''].filter(Boolean).join(' · ')||(snapshot?'Rekod belum tersedia':'Data belum tersedia'))+'</b></button>';
  }).join('');
  const date=dates[selected],target=previousYear(date),list=recordsForDay(rows,date,state,type);
  $('outlookDate').textContent=format(date);
  $('outlookBasis').textContent=selected<7?'Ramalan cuaca untuk '+(city?.label||'lokasi dipilih')+' · pilihan negeri/bencana menapis sejarah sahaja.':target?'Rujukan sejarah pada '+format(target)+' · maklumat negeri/daerah/kawasan.':'Tiada tarikh 29 Februari yang sepadan pada tahun sebelumnya.';
  if(selected<7){const d=forecast?.daily?.find(x=>x.date===date);$('outlookRecords').innerHTML='<div class="outlook-empty"><h3>'+(d?Math.round(d.low)+'°C – '+Math.round(d.high)+'°C':'Ramalan belum tersedia')+'</h3><p>'+e(city?.label||'Lokasi dipilih')+'</p><p>Ramalan sebenar daripada MET Norway. Tempoh yang tidak disediakan sumber tidak diisi dengan anggaran.</p><button class="btn" id="openForecastDay">Lihat harian & setiap jam</button></div>';$('openForecastDay').onclick=()=>{selectTab(false);bridge()?.goToForecast(date);};}
  else $('outlookRecords').innerHTML=!snapshot?'<div class="outlook-empty">Data sejarah belum dapat dimuatkan. Cuba Muat semula.</div>':list.length?list.map(record=>'<article class="outlook-record"><span class="outlook-kicker">'+e(typeLabel(record.disaster_type))+' · '+e(record.state)+'</span><h3>'+e(record.location||record.district||record.state)+'</h3>'+(record.location&&record.district?'<p>'+e(record.district)+'</p>':'')+'<p>'+(record.date_basis==='observation_date'?'Tarikh pemerhatian: '+e(format(record.observation_date))+' (bukan tarikh mula kejadian)':'Tarikh kejadian: '+e(format(record.event_start_date))+(record.event_end_date?' hingga '+e(format(record.event_end_date)):''))+'</p><p>'+e(record.notes)+'</p><a href="'+safeLink(record.source_url)+'" target="_blank" rel="noopener noreferrer">'+e(record.source_agency)+' · '+e(record.source_document)+(record.source_page?' · '+e(record.source_page):'')+' ↗</a></article>').join(''):'<div class="outlook-empty"><h3>Rekod sejarah belum tersedia</h3><p>Tiada rekod yang dimuatkan untuk tarikh dan tapisan ini. Ini bukan pengesahan bahawa kawasan selamat atau tiada bencana pada tahun lepas.</p></div>';
+ const historical=operationsForDay(reports,date,state);
+ $('historicalOperationsTitle').textContent=target?'Laporan operasi pada '+format(target):'Sejarah laporan operasi';
+ $('historicalOperationsRecords').innerHTML=!reportsLoaded?'<p>Laporan operasi belum dimuatkan.</p>':historical.length?historical.slice(0,20).map(r=>operationCard(r,true)).join(''):'<p>Belum ada laporan tersimpan untuk tarikh sama tahun lepas dan negeri dipilih.</p>';
+ $('showHistoricalOperations').hidden=!historical.length;
+}
+function operationCard(report,historical){
+ const total=['poslaju','posdaftar','mel'].reduce((n,key)=>n+(Number(report[key])||0),0);
+ return '<article class="outlook-record operation-record"><span class="outlook-kicker">Operasi dalaman · '+e(report.state)+'</span><h3>'+e(report.branch)+'</h3><p>Poskod '+e(report.postcode)+' · BIT '+e(report.bit)+'</p><p>'+e((report.locations||[]).join(' · '))+'</p><p>'+e(report.remarks||'Tiada catatan punca gangguan.')+'</p><p>Tarikh laporan: '+e(format(report.report_date))+'</p>'+(historical?'<p class="hint">Status rekod kini: '+(report.status==='resolved'?'Selesai':'Aktif')+'. Butiran tersimpan mungkin telah disunting selepas tarikh laporan.</p>':'<p>'+total.toLocaleString()+' item tertunda · Kemas kini terakhir '+e(report.updated_at?new Date(report.updated_at).toLocaleString('ms-MY',{timeZone:'Asia/Kuala_Lumpur'}):'tidak diketahui')+'</p>')+'</article>';
 }
 function selectTab(outlook){$('existingForecast').hidden=outlook;$('newOutlook').hidden=!outlook;for(const [id,on] of [['existingForecastTab',!outlook],['newOutlookTab',outlook]]){$(id).classList.toggle('selected',on);$(id).setAttribute('aria-selected',String(on));}if(outlook)render();else window.dispatchEvent(new Event('resize'));}
 function clearPreview(){preview=null;$('importPreview').hidden=true;$('confirmHistoryImport').disabled=true;showError('importError');$('importResult').textContent='';}
@@ -49,7 +61,9 @@ function renderImportPreview(value){
 async function refreshAdmin(){if(!bridge()?.context()?.profile?.active||bridge().context().profile.role!=='admin')return;try{adminSnapshot=await bridge().request('admin');$('historyAdminStatus').textContent=metadata(adminSnapshot)+(adminSnapshot.updatedBy?' Dikemas kini oleh '+adminSnapshot.updatedBy+'.':'');$('downloadHeldHistory').disabled=!adminSnapshot.review.length;}catch(err){showError('importError',err.message);}}
 export async function initHistoryUI(){
  $('existingForecastTab').onclick=()=>selectTab(false);$('newOutlookTab').onclick=()=>selectTab(true);
- $('historyReload').onclick=loadHistory;$('outlookState').onchange=$('outlookType').onchange=render;
+ $('historyReload').onclick=()=>Promise.allSettled([loadHistory(),bridge()?.refreshReports()]);$('outlookState').onchange=$('outlookType').onchange=render;
+ $('showCurrentOperations').onclick=()=>bridge()?.openReports({state:$('outlookState').value,status:'active'});
+ $('showHistoricalOperations').onclick=()=>bridge()?.openReports({state:$('outlookState').value,date:previousYear(dates[selected]),status:''});
  $('outlookCalendar').onclick=event=>{const button=event.target.closest('[data-outlook-day]');if(button){selected=Number(button.dataset.outlookDay);render();}};
  $('historyFile').onchange=()=>{clearPreview();controls();};
  $('previewHistory').onclick=async()=>{clearPreview();const file=$('historyFile').files[0];if(!file)return;if(!/\.xlsx$/i.test(file.name)||file.size>2*1024*1024){showError('importError','Pilih fail .xlsx sehingga 2 MB.');return;}busy=true;controls();try{preview=await bridge().request('preview',file);renderImportPreview(preview);}catch(err){showError('importError',err.message);}finally{busy=false;controls();}};
@@ -59,6 +73,7 @@ export async function initHistoryUI(){
  $('reloadHistoryAdmin').onclick=refreshAdmin;
  document.addEventListener('pantau:identity',()=>{clearPreview();adminSnapshot=null;$('historyFile').value='';controls();if(bridge()?.context()?.profile?.role==='admin')refreshAdmin();});
  document.addEventListener('pantau:weather',render);
+ document.addEventListener('pantau:reports',render);
  document.addEventListener('pantau:page',event=>{if(event.detail==='admin')refreshAdmin();if(event.detail==='weather')render();});
  window.addEventListener('focus',()=>{render();if(!$('newOutlook').hidden)loadHistory();});
  setInterval(()=>{if(dates[0]!==malaysiaToday())render();},60000);

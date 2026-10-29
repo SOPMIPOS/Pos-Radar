@@ -22,3 +22,11 @@ export function recordsForDay(records, date, state='', type='') {
   (r.date_basis==='observation_date' ? r.observation_date===target : r.event_start_date<=target && (r.event_end_date||r.event_start_date)>=target));
 }
 export const typeLabel = value => ({flood:'Banjir',earthquake:'Gempa bumi',storm:'Ribut',landslide:'Tanah runtuh',haze:'Jerebu',drought:'Kemarau',other:'Lain-lain'})[value] || value;
+// Staff reports are observations, not weather predictions or incident intervals.
+export function currentOperations(reports, today=malaysiaToday(), state='') {
+ return reports.filter(r=>r.status==='active'&&validDate(r.report_date)&&r.report_date<=today&&(!state||r.state===state));
+}
+export function operationsForDay(reports, date, state='') {
+ const target=previousYear(date);if(!target)return [];
+ return reports.filter(r=>['active','resolved'].includes(r.status)&&r.report_date===target&&(!state||r.state===state));
+}
