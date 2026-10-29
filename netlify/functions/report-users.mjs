@@ -1,3 +1,4 @@
+import { syncPsmCatalog } from './lib/branch-catalog.mjs';
 const URL_DEFAULT='https://orbevdrvkmnddkzuqiuj.supabase.co';
 const PUBLIC_DEFAULT='sb_publishable_5ybYDImMD1M_5JoHVhCOJg_QM388v0X';
 export function createHandler({env=process.env,request=fetch}={}){
@@ -26,6 +27,7 @@ export function createHandler({env=process.env,request=fetch}={}){
    }
    const raw=await req.text();if(Buffer.byteLength(raw)>20000)fail('Permintaan terlalu besar.',413);
    let body;try{body=JSON.parse(raw);}catch{fail('Maklumat tidak sah.');}if(!body||Array.isArray(body)||typeof body!=='object')fail('Maklumat tidak sah.');
+   if(req.method==='POST'&&body.action==='sync-branches')return respond(await syncPsmCatalog(api));
    const clean=(v,label,max=120)=>{if(typeof v!=='string'||!v.trim()||v.trim().length>max)fail(label+' tidak sah.');return v.trim();};
    let existing;
    if(req.method!=='POST'){
@@ -73,3 +75,4 @@ export function createHandler({env=process.env,request=fetch}={}){
 }
 export default createHandler();
 export const config={path:'/api/report-users'};
+

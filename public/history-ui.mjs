@@ -7,7 +7,7 @@ const bridge=()=>window.__history;
 function safeLink(value){try{const u=new URL(value);return ['https:','http:'].includes(u.protocol)?e(u.href):'#';}catch{return '#';}}
 function showError(id,text=''){$(id).textContent=text;$(id).hidden=!text;}
 function options(id,values,label,display=x=>x){const old=$(id).value;$(id).innerHTML='<option value="">'+label+'</option>'+values.map(v=>'<option value="'+e(v)+'">'+e(display(v))+'</option>').join('');if(values.includes(old))$(id).value=old;}
-function metadata(value){const s=value.summary;return s.count.toLocaleString()+' rekod diterbitkan · '+(s.from?format(s.from)+' – '+format(s.to):'Tiada tarikh')+' · '+value.reviewCount+' ditahan untuk semakan. Liputan separa.';}
+function metadata(value){const s=value.summary,counts={};for(const row of value.records||[])counts[row.state]=(counts[row.state]||0)+1;const dominant=Object.entries(counts).sort((a,b)=>b[1]-a[1])[0];return s.count.toLocaleString()+' rekod diterbitkan · '+(s.from?format(s.from)+' – '+format(s.to):'Tiada tarikh')+' · '+value.reviewCount+' ditahan untuk semakan. Liputan separa.'+(dominant&&dominant[1]>s.count/2?' '+Math.round(100*dominant[1]/s.count)+'% rekod dalam set ini ialah '+dominant[0]+'. Liputan negeri lain belum lengkap; negeri yang tiada rekod tidak disahkan bebas bencana.':'');}
 async function loadHistory(){
  $('historyReload').disabled=true;
  try {
