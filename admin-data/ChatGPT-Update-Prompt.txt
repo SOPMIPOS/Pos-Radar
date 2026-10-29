@@ -1,0 +1,76 @@
+I administer Pantau Cawangan, a Pos Malaysia application that displays weather forecasts, operational disruptions and historical disaster references for Malaysia.
+
+Please update the attached historical disaster Excel workbook. You do not need any previous conversation to perform this task.
+
+PURPOSE
+The application uses historical records to show what happened around the same calendar dates in the previous year. These are historical awareness reminders, not predictions that disasters will happen again.
+Historical information is displayed generally by state, district or area. Do not map records to Pos Malaysia branches, PPL, PSM, postcodes or delivery SLA.
+
+UPDATE PERIOD
+Start date: [YYYY-MM-DD]
+End date: [YYYY-MM-DD]
+
+SOURCE FILE
+Use the attached workbook as the master. Preserve all existing worksheets, records, column names and established value conventions.
+If no workbook is attached, ask me to attach the latest historical disaster workbook before proceeding.
+
+RESEARCH
+Browse the internet for documented Malaysian disaster events within the update period. Prioritise official sources, including NADMA, JPS, MET Malaysia, DOE/APIMS and government agencies.
+Use dated historical reports or archives. Do not treat a current river reading, forecast or weather warning as proof that a disaster occurred.
+Every new record must have a verifiable source URL. Identify secondary sources clearly. Never invent records or claim complete national coverage when sources are incomplete.
+
+EXCEL FORMAT
+Preserve the worksheet name Historical_Events.
+Keep these exact 14 column headers in this exact order:
+source_agency
+source_document
+source_url
+source_page
+observation_date
+event_start_date
+event_end_date
+disaster_type
+state
+district
+location
+date_basis
+notes
+review_required
+
+Keep the header row at row 1. Do not insert titles, merged cells or explanatory rows above it.
+Follow the attached workbook's existing field-value conventions, including disaster_type, date_basis and review_required.
+Use actual Excel date values displayed as YYYY-MM-DD, without time components. Leave unknown values blank rather than entering guessed dates, zeroes or placeholder dates.
+
+DATA RULES
+1. Preserve existing records and append verified new records.
+2. Exclude duplicates. Compare source, location, disaster type and dates; do not merge different locations merely because they share a date.
+3. Keep observation dates separate from actual event dates. A report publication date does not automatically establish when an event started.
+4. Do not infer districts from division names or invent missing geographic details.
+5. Preserve uncertainty in notes and flag records needing review.
+6. Do not silently replace conflicting existing information; flag the conflict.
+7. Preserve source links and source-page references.
+8. Treat missing records as a coverage gap, not evidence that no disasters occurred.
+9. Update the Coverage worksheet and relevant source/methodology notes to reflect the resulting workbook.
+
+DELIVERABLE
+Return a downloadable .xlsx file named:
+Malaysia-Historical-Disaster-Updated-[YYYY-MM-DD].xlsx
+Use the date you prepare the file in its filename.
+
+Before delivering, check that:
+- The workbook opens successfully.
+- Historical_Events contains the exact required headers.
+- Dates are valid.
+- New records have source URLs.
+- Duplicate checks have been performed.
+- Coverage totals match the records.
+
+Also provide a short summary of:
+- New records added.
+- Duplicates excluded.
+- Records requiring review.
+- Date and geographic coverage.
+- Remaining gaps and inaccessible sources.
+
+Do not upload anything to the application or claim it has been deployed. The admin will review and import the returned Excel file separately.
+If browsing or Excel creation is unavailable, explain the limitation instead of claiming the update is complete.

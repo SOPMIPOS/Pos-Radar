@@ -8,6 +8,15 @@ A Pos Malaysia dashboard for weather monitoring and branch delivery-disruption r
 
 Repository documentation is written in English. Website labels and operational wording remain in Malay.
 
+## Admin: update historical data
+
+**No coding needed.** Open the [step-by-step admin guide and ChatGPT prompt](ADMIN-HISTORICAL-DATA.md) to prepare historical-data updates.
+
+- [Download the initial historical Excel file](https://github.com/hudahaz/Weather-App/raw/refs/heads/main/admin-data/Malaysia-Historical-Disaster-Starter.xlsx)
+- [Open the reusable ChatGPT prompt](admin-data/ChatGPT-Update-Prompt.txt)
+
+The starter has partial coverage for January 2025–September 2026. The historical-data importer and 30-day historical outlook are not yet confirmed deployed; saving these files in GitHub does not activate them.
+
 ## What the application does
 
 - Shows daily and hourly weather forecasts, including temperature and precipitation for the source's stated time intervals.
