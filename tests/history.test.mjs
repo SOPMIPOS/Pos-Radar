@@ -75,6 +75,17 @@ test('OOXML rejects wrong headers, macros, corrupt archives and formulas',async(
  await assert.rejects(readHistoricalWorkbook(Buffer.from('bad')),/xlsx/);
  const parsed=await readHistoricalWorkbook(await fixture({cell:'<c r="A2"><f>1+1</f><v>2</v></c>'}));assert.match(parsed.rows[0].cellError,/Formula/);
 });
+test('OOXML handles explicit numeric date cells without coercing text dates or blanks',async()=>{
+ const parsed=await readHistoricalWorkbook(await fixture({cell:'<c r="E2" t="n"><v>45658</v></c><c r="F2" t="n"><v>45659</v></c><c r="G2" t="n"/><c r="M2" t="inlineStr"><is><t>45658</t></is></c>'}));
+ const record=parsed.rows[0].record;
+ assert.equal(record.observation_date,45658);
+ assert.equal(record.event_start_date,45659);
+ assert.equal(record.event_end_date,'');
+ assert.equal(record.notes,'45658');
+ assert.equal(normalizeDate(record.observation_date),'2025-01-01');
+ assert.equal(normalizeDate(record.event_start_date),'2025-01-02');
+ assert.throws(()=>normalizeDate(record.notes));
+});
 function harness({role='admin',active=true,now=Date.parse('2026-10-29T03:00:00Z'),parser,store:given}={}){
  const blobs=given||new Map();let serial=0;
  const storage={async getWithMetadata(key){return blobs.get(key)||null;},async get(key){return blobs.get(key)?.data||null;},async setJSON(key,data,condition={}){const old=blobs.get(key);if(condition.onlyIfNew&&old||condition.onlyIfMatch&&old?.etag!==condition.onlyIfMatch)return {modified:false};blobs.set(key,{data:structuredClone(data),etag:String(++serial)});return {modified:true};},async delete(key){blobs.delete(key);}};
