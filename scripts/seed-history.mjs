@@ -1,0 +1,10 @@
+import {readFile,writeFile} from 'node:fs/promises';
+import {readHistoricalWorkbook} from '../netlify/functions/lib/history-xlsx.mjs';
+import {reviewRows,summary} from '../netlify/functions/lib/history-validation.mjs';
+const source=new URL('../admin-data/Malaysia-Historical-Disaster-Starter.xlsx',import.meta.url);
+const workbook=await readHistoricalWorkbook(await readFile(source));
+const result=reviewRows(workbook.rows,[],{date1904:workbook.date1904});
+if(result.counts.invalid)throw Error('Starter contains invalid rows. Review validation before changing the seed.');
+const seed={revision:'starter-v1',records:result.accepted,review:result.held,updatedAt:null,updatedBy:'Initial sourced workbook',coverage:'partial'};
+await writeFile(new URL('../netlify/functions/lib/history-seed.mjs',import.meta.url),'// Generated from admin-data/Malaysia-Historical-Disaster-Starter.xlsx. Partial national coverage.\nexport default '+JSON.stringify(seed)+';\n');
+console.log(result.counts,summary(seed.records));

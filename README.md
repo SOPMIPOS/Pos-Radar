@@ -15,7 +15,7 @@ Repository documentation is written in English. Website labels and operational w
 - [Download the initial historical Excel file](https://github.com/hudahaz/Weather-App/raw/refs/heads/main/admin-data/Malaysia-Historical-Disaster-Starter.xlsx)
 - [Open the reusable ChatGPT prompt](admin-data/ChatGPT-Update-Prompt.txt)
 
-The starter has partial coverage for January 2025–September 2026. The historical-data importer and 30-day historical outlook are not yet confirmed deployed; saving these files in GitHub does not activate them.
+The starter has partial coverage for January 2025–September 2026. This release implements the rolling 30-day outlook and the admin Excel importer. The initial dataset is loaded automatically: 1,017 published records and 30 held for review. New records are previewed and validated before an active Admin confirms an append-only import.
 
 ## What the application does
 
@@ -111,7 +111,7 @@ Sekarang, Hari ini and 7 hari can show the same affected branches when current w
 
 Maps show forecast locations, branches and monitoring stations, not flood boundaries or radar. A branch can cover several areas; an alert matched to one area may flag the whole branch.
 
-**Historical flood prediction using previous years' records is not implemented.** Matching a past flood date to the same date this year would only be a historical reminder, not a reliable flood forecast.
+**The 30-day outlook is a historical awareness tool.** Days 1–7 use available live forecasts for the selected location; days 8–30 show sourced records on the same calendar dates in the previous year. It is not a flood prediction. The initial accepted records span 1 January 2025–28 February 2026 with partial coverage; 28 flagged records and two conflicting records are held for review. A missing record is a coverage gap. Admin imports persist in the site-wide `pantau-cawangan-history` Netlify Blobs store and survive redeployments. Existing Supabase authentication checks active Admin access before each upload and confirmation. No new SQL migration or environment key is required.
 
 Shared warning refresh is limited to once per 30 minutes. Open summary/branch pages poll the shared snapshot every two minutes. Provider failures may leave explicitly stale cached data or an error; check source timestamps.
 
@@ -127,3 +127,17 @@ Before wider rollout:
 5. Gather feedback from a small group of staff.
 
 Outstanding work includes completing email password recovery and collecting suitable historical flood records to link event locations to delivery areas.
+
+
+## Historical data implementation and tests
+
+- `public/history-core.mjs`: rolling Malaysia calendar and previous-year event/observation matching.
+- `public/history-ui.mjs` and `public/history.css`: outlook and admin import interface.
+- `netlify/functions/historical-data.mjs`: public read and authenticated Admin preview/confirm endpoint.
+- `netlify/functions/lib/history-*`: bounded XLSX parser, validation, initial records and import persistence.
+- `public/admin-historical-data.html` and `public/admin-data/`: easily accessible guide, prompt and starter workbook.
+- `tests/history.test.mjs`: run `npm ci` then `npm test` for calendar, workbook, permissions, duplicate/conflict, persistence and concurrency tests.
+- `npm run seed:history`: regenerate the bundled seed from the committed starter workbook. Changes to the seed do not overwrite a dataset already imported into the shared store.
+- `npm run preview:qa`: optional local QA server, with a test-only admin at `/?qa=admin`. It stores imports in memory and is never deployed as a function or public asset. No real credentials or operational reports are used.
+
+Limits: 2 MB per workbook, 10,000 rows per import, 50,000 published records and 10,000 held records. Formula cells, macros, external links, ambiguous dates and malformed files are rejected. Uploaded original XLSX files are not retained; the canonical records, admin identity and previous published snapshot are retained. Review drafts expire after one hour for confirmation; abandoned draft blobs may require periodic maintainer cleanup. Published dataset replacement/deletion is deliberately not offered in the importer.

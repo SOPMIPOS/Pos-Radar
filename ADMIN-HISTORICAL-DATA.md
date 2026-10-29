@@ -29,11 +29,24 @@ The starter contains **1,047 location/date records** for selected Malaysian loca
 
 ## Uploading to the website
 
-**Status as of 29 October 2026: the historical-data importer is pending completion and deployment.** Adding this workbook to GitHub does not load its records into the website or activate the 30-day outlook.
+The 30-day outlook and admin importer are implemented in this release. The initial sourced dataset is included automatically: **1,017 published records and 30 held for review** (28 originally flagged, plus two conflicts found during validation). You do not need to upload the starter on first use.
 
-The agreed workflow, once released, is: log in as Admin → **Urus pengguna** → **Import data sejarah** → choose the reviewed Excel file → inspect the validation preview → **Sahkan import**.
+1. Log in to the website as an active **Admin**.
+2. Open **Urus pengguna** and scroll to **Import data sejarah**.
+3. Choose the reviewed **.xlsx** workbook (up to 2 MB and 10,000 rows).
+4. Click **Pratonton & semak fail**. Review accepted rows, held rows, duplicates and errors. You can download all validation messages as CSV.
+5. Click **Sahkan import**. Only valid new records are published; held records remain in the admin review queue. Duplicate rows and invalid rows are not published.
+6. Read the success message. The 30-day outlook reloads the shared dataset. Other users see it on their next refresh.
 
-If that option is absent, keep the reviewed workbook and contact the application maintainer. Do not change column names or paste historical rows into operational reports.
+Imports append records; they never silently replace published records. If another admin imports while your preview is open, preview the file again. Previews expire after one hour. The previous published snapshot is retained for maintainer recovery.
+
+Download held records as CSV to review them. Correct the corresponding rows in the Excel workbook, verify their sources and change review_required to no only after resolving the uncertainty. Upload the corrected workbook again. Conflicting published records require maintainer review; changing the flag alone does not overwrite them.
+
+**Coverage correction:** the starter was researched for January 2025–September 2026, but the actual records accepted by the importer span **1 January 2025–28 February 2026**, with partial coverage. Do not assume records exist through September 2026. The website shows the actual range dynamically. Missing records mean missing coverage, not no disaster.
+
+The rolling 30-day view uses available live forecasts for days 1–7, and same-date-last-year history for days 8–30. Event intervals include their end date. Observation records match only their observation date. No historical date is invented for 29 February when the previous year was not a leap year.
+
+If the import option is absent after deployment, hard refresh the page and check that you are logged in as an active Admin. Do not paste history into operational reports.
 
 ## Copy this prompt into ChatGPT
 
@@ -115,3 +128,4 @@ Also provide a short summary of:
 Do not upload anything to the application or claim it has been deployed. The admin will review and import the returned Excel file separately.
 If browsing or Excel creation is unavailable, explain the limitation instead of claiming the update is complete.
 ```
+

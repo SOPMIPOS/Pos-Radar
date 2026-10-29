@@ -3,6 +3,13 @@
   "private": true,
   "type": "module",
   "dependencies": {
-    "@netlify/blobs": "^11.1.4"
+    "@netlify/blobs": "^11.1.4",
+    "jszip": "3.10.1",
+    "sax": "1.6.1"
+  },
+  "scripts": {
+    "test": "node --test tests/*.test.mjs",
+    "preview:qa": "node tests/preview-server.mjs",
+    "seed:history": "node scripts/seed-history.mjs"
   }
 }
