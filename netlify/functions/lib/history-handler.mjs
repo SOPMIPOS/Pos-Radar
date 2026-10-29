@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import { readHistoricalWorkbook, MAX_FILE_BYTES } from './history-xlsx.mjs';
-import { reviewRows, recordHash, recordKey, summary } from './history-validation.mjs';
+import { reviewRows, recordHash, recordKey, summary, publishedRecords } from './history-validation.mjs';
 const DEFAULT_URL='https://orbevdrvkmnddkzuqiuj.supabase.co';
 const DEFAULT_PUBLIC='sb_publishable_5ybYDImMD1M_5JoHVhCOJg_QM388v0X';
 const KEY='historical-events-v1', TTL=3600000;
@@ -28,8 +28,9 @@ export function createHistoryHandler({getStore,seed,env=process.env,request=fetc
    const store=getStore({name:'pantau-cawangan-history',consistency:'strong'});
    const stored=await store.getWithMetadata(KEY,{type:'json'}),current=stored?.data||seed;
    if(!current?.records||!current.revision)fail('Data sejarah tidak dapat dibaca.',503);
-   const meta={revision:current.revision,updatedAt:current.updatedAt,updatedBy:current.updatedBy,summary:summary(current.records),reviewCount:current.review?.length||0};
-   if(req.method==='GET')return respond({...meta,records:current.records,...(action==='admin'?{review:current.review||[]}:{}),coverageNote:'Liputan separa. Tiada rekod bukan bermakna tiada bencana.'});
+   const visible=publishedRecords(current);
+   const meta={revision:current.revision,updatedAt:current.updatedAt,updatedBy:current.updatedBy,summary:summary(visible),reviewCount:visible.filter(r=>r.review_required==='yes').length};
+   if(req.method==='GET')return respond({...meta,records:visible,...(action==='admin'?{review:current.review||[]}:{}),coverageNote:'Liputan separa. Rekod berflag belum disahkan. Tiada rekod bukan bermakna tiada bencana.'});
    const length=Number(req.headers.get('content-length'));if(length>MAX_FILE_BYTES)fail('Pilih fail .xlsx sehingga 2 MB.',413);
    // Bound the stream even when Content-Length is absent or inaccurate.
    const reader=req.body?.getReader();if(!reader)fail('Fail atau permintaan kosong.');
@@ -66,7 +67,8 @@ export function createHistoryHandler({getStore,seed,env=process.env,request=fetc
    // Confirm durable state rather than trusting a write acknowledgement alone.
    const check=await store.get(KEY,{type:'json'});if(check?.revision!==revision)fail('Simpanan belum dapat disahkan. Muat semula status sebelum mencuba lagi.',503);
    await store.delete('draft/'+body.previewId).catch(()=>{});
-   return respond({ok:true,revision,counts:draft.counts,summary:summary(records),reviewCount:held.size,updatedAt:snapshot.updatedAt,updatedBy:snapshot.updatedBy});
+   const published=publishedRecords(snapshot);
+   return respond({ok:true,revision,counts:draft.counts,summary:summary(published),reviewCount:published.filter(r=>r.review_required==='yes').length,updatedAt:snapshot.updatedAt,updatedBy:snapshot.updatedBy});
   }catch(e){return respond({error:e.status?e.message:'Perkhidmatan sejarah tidak tersedia. Cuba semula.'},e.status||503);}
  };
 }

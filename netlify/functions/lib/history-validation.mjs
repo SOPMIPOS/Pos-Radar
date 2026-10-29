@@ -76,3 +76,23 @@ export function summary(records) {
  const dates=records.map(r=>r.date_basis==='event_date'?r.event_start_date:r.observation_date).filter(Boolean).sort();
  return {count:records.length,from:dates[0]||null,to:dates.at(-1)||null,states:[...new Set(records.map(r=>r.state))].sort(),coverage:'partial'};
 }
+// Keep stored originals intact; expose uncertain entries with their flags and notes.
+// Same-source/location/date alternatives share one card, rather than inflating counts.
+export function publishedRecords(snapshot) {
+ const records=new Map();
+ for(const record of [...snapshot.records,...(snapshot.review||[])]) {
+  const key=recordKey(record),old=records.get(key);
+  if(!old){records.set(key,{...record});continue;}
+  const same=recordHash({...old,review_required:'no'})===recordHash({...record,review_required:'no'});
+  if(!same) {
+   const detail=[record.source_document,record.source_page&&'Halaman: '+record.source_page,
+    record.observation_date&&'Pemerhatian: '+record.observation_date,
+    record.event_start_date&&'Mula: '+record.event_start_date,
+    record.event_end_date&&'Tamat: '+record.event_end_date,record.notes].filter(Boolean).join(' · ');
+   const note='Maklumat alternatif belum disahkan: '+detail;
+   if(!old.notes.includes(note))old.notes+=(old.notes?'\n':'')+note;
+  }
+  if(!same||record.review_required==='yes')old.review_required='yes';
+ }
+ return [...records.values()];
+}

@@ -3,10 +3,11 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import JSZip from 'jszip';
 import { HEADERS,rollingDates,previousYear,recordsForDay,malaysiaToday } from '../public/history-core.mjs';
-import { normalizeDate,normalizeRecord,reviewRows,recordKey } from '../netlify/functions/lib/history-validation.mjs';
+import { normalizeDate,normalizeRecord,reviewRows,recordKey,publishedRecords } from '../netlify/functions/lib/history-validation.mjs';
 import { readHistoricalWorkbook } from '../netlify/functions/lib/history-xlsx.mjs';
 import { createHistoryHandler } from '../netlify/functions/lib/history-handler.mjs';
 import seed from '../netlify/functions/lib/history-seed.mjs';
+import updatedSeed from '../netlify/functions/lib/history-updated-seed.mjs';
 const base={source_agency:'NADMA',source_document:'Dated report',source_url:'https://example.gov.my/report.pdf',source_page:'2',observation_date:'',event_start_date:'2025-11-01',event_end_date:'',disaster_type:'flood',state:'Selangor',district:'Klang',location:'Area A',date_basis:'event_date',notes:'Documented location',review_required:'no'};
 const opts={today:'2026-10-29'};
 test('Malaysia calendar rolls over at local midnight, not host midnight',()=>{
@@ -128,15 +129,45 @@ test('preview belongs to its creator and rejects forged preview IDs',async()=>{
  const draft=await preview(h);h.blobs.get('draft/'+draft.previewId).data.owner='another-admin';
  assert.equal((await h.call('confirm',{method:'POST',data:draft})).status,404);
 });
-test('held records are not published; corrected records can replace a held copy',async()=>{
+test('flagged records are public with uncertainty preserved; corrected records clear the flag',async()=>{
  const held={...base,location:'Held area',review_required:'yes'};
  const h=harness({parser:async()=>({rows:[held]})});let d=await preview(h);
  assert.equal((await h.call('confirm',{method:'POST',data:d})).status,200);
- assert.equal((await (await h.call()).json()).records.length,1);
+ const publicData=await (await h.call()).json();
+ assert.equal(publicData.records.length,2);
+ assert.equal(publicData.records.find(r=>r.location==='Held area').review_required,'yes');
+ assert.equal(publicData.summary.count,2);assert.equal(publicData.reviewCount,1);
  assert.equal((await (await h.call('admin')).json()).review.length,1);
  const h2=harness({store:h.blobs,parser:async()=>({rows:[{...held,review_required:'no'}]})});d=await preview(h2);
  assert.equal((await h2.call('confirm',{method:'POST',data:d})).status,200);
  assert.equal((await (await h2.call('admin')).json()).review.length,0);
+});
+test('public history combines conflicting versions without overwriting originals or duplicating locations',()=>{
+ const original={...base,event_end_date:'2025-11-02'};
+ const alternative={...original,event_end_date:'2025-11-03',notes:'End date uncertain',review_required:'yes'};
+ const snapshot={records:[original],review:[alternative,{...base,location:'Another area',review_required:'yes'}]};
+ const before=JSON.stringify(snapshot),visible=publishedRecords(snapshot);
+ assert.equal(visible.length,2);assert.equal(JSON.stringify(snapshot),before);
+ assert.equal(visible[0].event_end_date,'2025-11-02');
+ assert.equal(visible[0].review_required,'yes');assert.match(visible[0].notes,/2025-11-03/);assert.match(visible[0].notes,/End date uncertain/);
+ assert.equal(publishedRecords({records:[base],review:[{...base,review_required:'yes'}]}).length,1);
+});
+test('uncertain historical records have visible calendar and detail warnings',()=>{
+ const ui=readFileSync(new URL('../public/history-ui.mjs',import.meta.url),'utf8');
+ assert(ui.includes('⚑ Belum disahkan'));assert(ui.includes('class="history-uncertain"'));
+ assert(ui.includes('Diimport dengan flag'));assert(!ui.includes('Ditahan untuk semakan'));
+});
+test('deployed workbook includes all 1310 sourced rows with public uncertainty flags and no duplicate keys',()=>{
+ assert.equal(updatedSeed.records.length+updatedSeed.review.length,1310);
+ assert.equal(updatedSeed.review.length,52);
+ for(const r of [...updatedSeed.records,...updatedSeed.review])assert.doesNotThrow(()=>normalizeRecord(r,opts));
+ const rows=publishedRecords(updatedSeed);
+ assert.equal(rows.length,1308);assert.equal(new Set(rows.map(recordKey)).size,rows.length);
+ assert.equal(rows.filter(r=>r.review_required==='yes').length,50);
+ assert.equal(new Set(rows.map(r=>r.state)).size,16);
+ assert(rows.some(r=>r.state==='Terengganu'&&r.observation_date==='2025-12-26'));
+ const entry=readFileSync(new URL('../netlify/functions/historical-data.mjs',import.meta.url),'utf8');
+ assert(entry.includes("'./lib/history-updated-seed.mjs'"));
 });
 test('HTML integration keeps production features and contains no preview mocks',()=>{
  const html=readFileSync(new URL('../public/index.html',import.meta.url),'utf8');
