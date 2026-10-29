@@ -57,7 +57,7 @@ export async function readHistoricalWorkbook(bytes) {
   close:tag=>{
    if(['v','t'].includes(tag))capture=false;
    if(tag==='c'&&cell){let value=cell.type==='s'?shared[Number(cell.text)]:cell.text;
-    if(!cell.type && cell.text!=='')value=Number(cell.text);
+    if((!cell.type || cell.type==='n') && cell.text!=='')value=Number(cell.text);
     if(cell.formula || cell.type==='e')row.cellError='Formula atau ralat sel tidak dibenarkan; tampal nilai sahaja.';
     if(cell.index>13 && String(value??'').trim())throw Error('Historical_Events mesti mempunyai 14 lajur sahaja.');
     if(cell.index<14)row.cells[cell.index]=value??'';cell=null;
