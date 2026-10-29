@@ -15,9 +15,21 @@ Use the attached workbook as the master. Preserve all existing worksheets, recor
 If no workbook is attached, ask me to attach the latest historical disaster workbook before proceeding.
 
 RESEARCH
-Browse the internet for documented Malaysian disaster events within the update period. Prioritise official sources, including NADMA, JPS, MET Malaysia, DOE/APIMS and government agencies.
-Use dated historical reports or archives. Do not treat a current river reading, forecast or weather warning as proof that a disaster occurred.
-Every new record must have a verifiable source URL. Identify secondary sources clearly. Never invent records or claim complete national coverage when sources are incomplete.
+
+Browse official sources AND credible national, state and local news websites for documented Malaysian disaster events during the requested period.
+
+Prioritise official records where available, but do not exclude an event merely because it is documented only by a credible news report.
+
+For every new record:
+- Provide the article/report title, publisher and direct source URL.
+- For news articles, put the publisher in source_agency and identify “News report” in notes.
+- Verify the actual event or observation date. Do not automatically use the article’s publication date as the event start date.
+- Confirm that a disaster actually occurred. Forecasts, warnings and preparedness announcements alone are insufficient.
+- Cross-check sources where possible. Flag conflicting or uncertain information for review.
+- Deduplicate syndicated articles and repeated coverage of the same incident.
+- Preserve distinct affected locations without counting every article as a separate disaster.
+
+Search across all Malaysian states and federal territories. Report coverage gaps and inaccessible sources honestly; do not claim nationwide completeness.
 
 EXCEL FORMAT
 Preserve the worksheet name Historical_Events.
